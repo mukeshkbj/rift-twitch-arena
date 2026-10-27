@@ -79,3 +79,5 @@ Copy `.env.example` to `.env` and set `OPENAI_API_KEY` to enable one short narra
 ## Hackathon delivery
 
 The official submission requires a Twitch-connected project built with Codex, a repository and setup instructions, a project description, the Codex session ID, and a public YouTube demo under three minutes showing the project on Twitch and how Codex was used. The published deadline is **November 2, 2026, 10:00 PM London time**. See the [official rules](https://twitchcon-codex.devpost.com/rules).
+
+The [submission draft and timed demo outline](docs/submission/draft.md) are ready to tailor once the live Twitch path and recording are confirmed.

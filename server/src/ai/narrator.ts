@@ -13,6 +13,7 @@ interface ResponsesPayload {
 export class EncounterNarrator {
   private readonly apiKey: string;
   private readonly model: string;
+  private lastRequestAt = 0;
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
     this.apiKey = env.OPENAI_API_KEY?.trim() ?? "";
@@ -26,6 +27,8 @@ export class EncounterNarrator {
   async narrate(snapshot: GameSnapshot): Promise<string | null> {
     const event = snapshot.adaptation;
     if (!this.enabled || !event) return null;
+    if (Date.now() - this.lastRequestAt < 8_000) return null;
+    this.lastRequestAt = Date.now();
 
     let response: Response;
     try {

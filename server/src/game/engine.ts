@@ -160,6 +160,14 @@ export class GameEngine {
     return this.publish();
   }
 
+  setNarration(matchId: string, round: number, eventId: string, narration: string): boolean {
+    if (this.snapshot.matchId !== matchId || this.snapshot.round !== round ||
+        this.snapshot.phase !== "intermission" || this.snapshot.adaptation?.eventId !== eventId) return false;
+    this.snapshot.adaptation.narration = narration;
+    this.publish();
+    return true;
+  }
+
   resetMatch(now = Date.now()): GameSnapshot {
     const mode = this.snapshot.input.mode;
     const twitchStatus = this.snapshot.input.twitchStatus;

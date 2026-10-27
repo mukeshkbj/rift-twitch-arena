@@ -57,6 +57,10 @@ RIFT subscribes to `channel.chat.message` through Twitch EventSub WebSocket and 
 
 If the account authorizes successfully but chat does not connect, check the exact redirect URI and the EventSub status in the studio, then choose **Retry**. The simulator remains available without Twitch credentials.
 
+## Optional AI narration
+
+Copy `.env.example` to `.env` and set `OPENAI_API_KEY` to enable one short narrator line after a round. RIFT sends only the fixed boss/event context, winning action, and aggregate vote counts to the OpenAI Responses API. Chat messages and viewer identities are not sent. The model cannot select or change game effects; on timeout, invalid output, missing key, or API error, the fixed event explanation remains in place. `OPENAI_MODEL` defaults to `gpt-5-mini` and can be changed to another Responses API model available to your account.
+
 ## Current limitations
 
 - Optional AI narration is not connected yet.

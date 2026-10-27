@@ -22,6 +22,7 @@ export interface Adaptation {
   eventId: string;
   title: string;
   explanation: string;
+  narration?: string;
 }
 
 export interface GameSnapshot {

@@ -98,6 +98,7 @@
 .encounter-card > p { max-width: 255px; margin: 0; color: #aaa89d; font-size: 10px; line-height: 1.65; }
 .encounter-details { display: flex; justify-content: space-between; padding-top: 12px; margin-top: 14px; border-top: 1px solid var(--coal-line); font: 8px var(--mono); letter-spacing: .07em; }.encounter-details span { color: var(--muted); }.encounter-details strong { color: var(--acid); font-weight: 400; }
 .encounter-card .adaptation-copy { margin-top: 9px; color: #d7cdb7; font-size: 9px; }
+.ai-narration { padding: 9px 10px; margin: 10px 0 0; border-left: 2px solid var(--acid); color: var(--paper); background: rgba(217,245,108,.045); font: 500 10px/1.5 var(--display); }.ai-narration span { display: block; margin-bottom: 4px; color: var(--acid); font: 8px var(--mono); letter-spacing: .1em; }
 .live-controls { padding: 16px 17px 13px; }
 .control-phase { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; }.control-phase i { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }.control-phase.active { color: var(--acid); }.control-phase.active i { background: var(--acid); }
 .primary-actions { display: grid; gap: 8px; margin-top: 14px; }

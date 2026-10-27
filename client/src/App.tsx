@@ -169,7 +169,10 @@ export function App() {
             <h2>THE HOLLOW<br /><em>WARDEN</em></h2>
             <p>A breach-born sentinel. It studies the crowd, then answers with force.</p>
             <div className="encounter-details"><span>ADAPTATION</span><strong>{game.boss.stance}</strong></div>
-            {game.adaptation && <p className="adaptation-copy">{game.adaptation.explanation}</p>}
+            {game.adaptation && <>
+              <p className="adaptation-copy">{game.adaptation.explanation}</p>
+              {game.adaptation.narration && <p className="ai-narration"><span>AI GAME MASTER</span>{game.adaptation.narration}</p>}
+            </>}
           </div>
 
           <div className="control-card live-controls">

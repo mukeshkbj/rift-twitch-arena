@@ -1,0 +1,26 @@
+:root {
+  font-family: "Segoe UI Variable", "Segoe UI", sans-serif;
+  color: #eeece4;
+  background: #171715;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  --coal: #171715;
+  --coal-soft: #20201d;
+  --coal-raised: #252520;
+  --coal-line: rgba(230, 227, 209, .12);
+  --paper: #eeece4;
+  --muted: #88877c;
+  --faint: #55564f;
+  --acid: #d9f56c;
+  --ember: #ff684f;
+  --amber: #f2b766;
+  --mono: "Cascadia Code", Consolas, monospace;
+  --display: "Bahnschrift", "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--coal); }
+button, a { font: inherit; }
+button { color: inherit; }
+a { color: inherit; }
+::selection { color: var(--coal); background: var(--acid); }

@@ -2,11 +2,11 @@ import { io } from "socket.io-client";
 
 export const gameSocket = io({ autoConnect: true, reconnection: true, reconnectionDelayMax: 3000 });
 
-export async function control<T>(path: string, body?: unknown): Promise<T> {
+export async function control<T>(path: string, body?: unknown, method: "GET" | "POST" = body === undefined ? "GET" : "POST"): Promise<T> {
   const response = await fetch(`/api/${path}`, {
-    method: body === undefined ? "GET" : "POST",
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
+    method,
+    headers: method === "POST" ? { "Content-Type": "application/json" } : undefined,
+    body: method === "POST" ? JSON.stringify(body ?? {}) : undefined,
   });
   if (!response.ok) {
     const result = await response.json().catch(() => null) as { error?: string } | null;

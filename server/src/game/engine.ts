@@ -11,8 +11,8 @@ export class GameEngine {
   private tieBreakRound = 0;
   private listeners = new Set<Listener>();
 
-  constructor(now = Date.now()) {
-    this.snapshot = this.newSnapshot(now);
+  constructor() {
+    this.snapshot = this.newSnapshot();
   }
 
   subscribe(listener: Listener): () => void {
@@ -30,7 +30,7 @@ export class GameEngine {
     this.tieBreakRound = 0;
     const mode = this.snapshot.input.mode;
     const twitchStatus = this.snapshot.input.twitchStatus;
-    this.snapshot = this.newSnapshot(now);
+    this.snapshot = this.newSnapshot();
     this.snapshot.input = { mode, twitchStatus };
     this.snapshot.phase = "voting";
     this.snapshot.round = 1;
@@ -43,6 +43,9 @@ export class GameEngine {
   submitVote(command: ChatCommand): VoteResult {
     if (this.snapshot.phase !== "voting" || this.snapshot.paused) {
       return { accepted: false, reason: "not-voting", snapshot: this.getSnapshot() };
+    }
+    if (this.snapshot.deadlineAt !== null && command.receivedAt > this.snapshot.deadlineAt) {
+      return { accepted: false, reason: "round-closed", snapshot: this.getSnapshot() };
     }
     if (this.votesByUser.has(command.userId)) {
       return { accepted: false, reason: "already-voted", snapshot: this.getSnapshot() };
@@ -174,12 +177,12 @@ export class GameEngine {
     this.votesByUser.clear();
     this.actionHistory = [];
     this.tieBreakRound = 0;
-    this.snapshot = this.newSnapshot(now);
+    this.snapshot = this.newSnapshot();
     this.snapshot.input = { mode, twitchStatus };
     return this.publish();
   }
 
-  private newSnapshot(now: number): GameSnapshot {
+  private newSnapshot(): GameSnapshot {
     return {
       matchId: randomUUID(),
       phase: "lobby",

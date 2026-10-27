@@ -34,6 +34,31 @@ function readCookie(cookieHeader: string | undefined, name: string): string | un
 export function createRoutes({ engine, oauth, twitch, narrator }: RouteDependencies): Router {
   const router = Router();
 
+  const requireStudioOrigin = (request: import("express").Request, response: import("express").Response, next: import("express").NextFunction): void => {
+    if (request.method !== "POST") {
+      next();
+      return;
+    }
+    let expectedOrigin: string;
+    try {
+      expectedOrigin = new URL(oauth.getAppBaseUrl()).origin;
+    } catch {
+      response.status(500).json({ error: "APP_BASE_URL must be a valid URL." });
+      return;
+    }
+    if (request.get("origin") !== expectedOrigin) {
+      response.status(403).json({ error: "This action must come from the RIFT studio." });
+      return;
+    }
+    if (!request.is("application/json")) {
+      response.status(415).json({ error: "Control requests must use JSON." });
+      return;
+    }
+    next();
+  };
+  router.use("/control", requireStudioOrigin);
+  router.use("/auth/twitch", requireStudioOrigin);
+
   router.get("/health", (_request, response) => response.json({ status: "ok", aiNarration: narrator.enabled }));
   router.get("/game", (_request, response) => response.json(engine.getSnapshot()));
   router.get("/auth/twitch/status", (_request, response) => response.json({

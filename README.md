@@ -13,6 +13,15 @@ npm run dev
 
 Open `http://localhost:5173` for streamer controls. Open `http://localhost:5173/overlay` as an OBS browser source. The dev server is local-only. Click **Begin encounter**, then use the Attack, Defend, or Riftburst simulator buttons to add 12 distinct viewers to the current round. Votes resolve after 20 seconds; **Resolve the vote** can end a round early.
 
+### Quick demo path
+
+1. Begin the encounter and send an Attack wave. Resolve it.
+2. Send another Attack wave in the next round. Resolve it to show the Warden adapt to repeated aggression.
+3. Send a Riftburst wave. Its shared charge and damage payoff should be visible in the round result.
+4. Repeat Riftburst if needed to finish the Warden, then show the battle feed and reset control.
+
+For a live chat demo, connect your authorized channel and type those same commands in Twitch chat. Keep the simulator disconnected while showing real votes.
+
 ```powershell
 npm run typecheck
 npm run build

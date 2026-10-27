@@ -11,6 +11,7 @@ interface EventSubEnvelope {
     session?: { id?: unknown; reconnect_url?: unknown; keepalive_timeout_seconds?: unknown };
     subscription?: { type?: unknown; status?: unknown };
     event?: {
+      broadcaster_user_id?: unknown;
       chatter_user_id?: unknown;
       chatter_user_name?: unknown;
       message?: { text?: unknown };
@@ -42,7 +43,7 @@ export class TwitchEventSub {
   }
 
   async connect(): Promise<void> {
-    if (this.status === "connected") return;
+    if (this.status === "connected" || this.status === "connecting") return;
     this.stopped = false;
     this.setStatus("connecting");
     try {
@@ -200,14 +201,21 @@ export class TwitchEventSub {
 
   private receiveChatMessage(envelope: EventSubEnvelope, messageId: string): void {
     const event = envelope.payload?.event;
-    if (!event || typeof event.chatter_user_id !== "string" || typeof event.chatter_user_name !== "string" ||
+    if (!event || typeof event.broadcaster_user_id !== "string" || typeof event.chatter_user_id !== "string" || typeof event.chatter_user_name !== "string" ||
         typeof event.message?.text !== "string") return;
+    let accountId: string;
+    try {
+      accountId = this.oauth.getAccount().id;
+    } catch {
+      return;
+    }
+    if (event.broadcaster_user_id !== accountId) return;
     if (messageId && this.seenMessageIds.has(messageId)) return;
     if (messageId) {
       this.seenMessageIds.add(messageId);
       if (this.seenMessageIds.size > 512) this.seenMessageIds.clear();
     }
-    if (event.chatter_user_id === this.oauth.getAccount().id) return;
+    if (event.chatter_user_id === accountId) return;
 
     const parsed = parseCommand(event.message.text, {
       userId: event.chatter_user_id,

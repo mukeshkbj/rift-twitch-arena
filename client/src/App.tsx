@@ -65,7 +65,7 @@ export function App() {
     setBusy(true);
     setError("");
     try {
-      const result = await control<GameSnapshot | { snapshot: GameSnapshot }>(path, body);
+      const result = await control<GameSnapshot | { snapshot: GameSnapshot }>(path, body, "POST");
       setGame("snapshot" in result ? result.snapshot : result);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Something went wrong. Try again.");
@@ -78,7 +78,7 @@ export function App() {
     setBusy(true);
     setError("");
     try {
-      await control(path);
+      await control(path, undefined, "POST");
       setTwitch(await control<TwitchAuthStatus>("auth/twitch/status"));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not update the Twitch connection.");
@@ -193,9 +193,11 @@ export function App() {
                 <strong>{twitch?.connected ? `@${twitch.login}` : "Your channel"}</strong>
                 <small>{twitch?.connected ? "Reading chat as your account" : "Authorize chat access"}</small>
               </div>
-              {!twitch?.connected ? (twitch?.configured ? <a className="connect-twitch" href="/api/auth/twitch/start">Connect <span aria-hidden="true">↗</span></a> : <span className="setup-needed">SETUP NEEDED</span>) : twitch.chatStatus === "connected" ?
-                <button className="disconnect-twitch" disabled={busy} onClick={() => void runTwitch("auth/twitch/disconnect")}>Disconnect</button> :
-                <button className="connect-twitch" disabled={busy} onClick={() => void runTwitch("auth/twitch/reconnect")}>Retry</button>}
+              {!twitch?.connected ? (twitch?.configured ? <a className="connect-twitch" href="/api/auth/twitch/start">Connect <span aria-hidden="true">↗</span></a> : <span className="setup-needed">SETUP NEEDED</span>) :
+                <div className="twitch-actions">
+                  {twitch.chatStatus !== "connected" && <button className="connect-twitch" disabled={busy || twitch.chatStatus === "connecting"} onClick={() => void runTwitch("auth/twitch/reconnect")}>{twitch.chatStatus === "connecting" ? "Connecting…" : "Retry"}</button>}
+                  <button className="disconnect-twitch" disabled={busy} onClick={() => void runTwitch("auth/twitch/disconnect")}>Disconnect</button>
+                </div>}
             </div>
             {!twitch?.configured && <p className="sim-note twitch-setup-note">Add your Twitch app keys to <code>.env</code> to enable live chat.</p>}
             <div className="control-divider twitch-divider" />

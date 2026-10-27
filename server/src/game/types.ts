@@ -45,4 +45,4 @@ export interface GameSnapshot {
 
 export type VoteResult =
   | { accepted: true; snapshot: GameSnapshot }
-  | { accepted: false; reason: "not-voting" | "already-voted"; snapshot: GameSnapshot };
+  | { accepted: false; reason: "not-voting" | "round-closed" | "already-voted"; snapshot: GameSnapshot };

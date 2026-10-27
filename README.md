@@ -45,11 +45,21 @@ docs/plans/          implementation milestones
 
 ## Twitch setup
 
-Not implemented yet. The planned integration uses Twitch OAuth and EventSub chat messages. No Twitch tokens or app credentials are needed for the local simulator. Do not commit Twitch secrets when integration is added.
+The OAuth and EventSub connection is implemented. To use live chat:
+
+1. Create a Twitch Developer application and set its OAuth Redirect URL to `http://localhost:3000/api/auth/twitch/callback`.
+2. Copy `.env.example` to `.env`; set `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`. Keep `.env` private.
+3. Keep `TWITCH_REDIRECT_URI` exactly matched to the Twitch application setting. For local development, keep `APP_BASE_URL=http://localhost:5173`.
+4. Start the app with `npm run dev`, open the studio, and choose **Connect** in the Twitch Chat panel. Authorize `user:read:chat` for the account whose channel will host the battle.
+5. In the studio, confirm the chat state reads **CONNECTED**. Type `!attack`, `!defend`, or `!special` in that channel while a round is open.
+
+RIFT subscribes to `channel.chat.message` through Twitch EventSub WebSocket and reads the authorized account's own channel. The access token and refresh token stay in server memory; they are not sent to the browser or written to disk. Restarting the server clears the local authorization, so connect again afterward. **Disconnect** revokes the token with Twitch and returns the game to simulator mode.
+
+If the account authorizes successfully but chat does not connect, check the exact redirect URI and the EventSub status in the studio, then choose **Retry**. The simulator remains available without Twitch credentials.
 
 ## Current limitations
 
-- Twitch OAuth/EventSub and optional AI narration are not connected yet.
+- Optional AI narration is not connected yet.
 - Match state is in memory; refreshing a browser is safe, restarting the server resets the match.
 - The controls and overlay are an initial visual pass and still need review at stream and mobile sizes.
 

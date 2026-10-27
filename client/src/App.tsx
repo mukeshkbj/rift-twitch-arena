@@ -2,6 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { control, gameSocket } from "./api/socket.js";
 import type { Action, GameSnapshot } from "./types.js";
 
+interface TwitchAuthStatus {
+  configured: boolean;
+  connected: boolean;
+  login: string | null;
+  scope: string | null;
+  chatStatus: "disconnected" | "connecting" | "connected" | "error";
+}
+
 const actionMeta: Record<Action, { label: string; command: string; icon: string }> = {
   attack: { label: "Attack", command: "!attack", icon: "↗" },
   defend: { label: "Defend", command: "!defend", icon: "⬡" },
@@ -26,6 +34,7 @@ function phaseLabel(snapshot: GameSnapshot): string {
 
 export function App() {
   const [game, setGame] = useState<GameSnapshot | null>(null);
+  const [twitch, setTwitch] = useState<TwitchAuthStatus | null>(null);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -34,6 +43,7 @@ export function App() {
   useEffect(() => {
     let active = true;
     control<GameSnapshot>("game").then((snapshot) => { if (active) setGame(snapshot); }).catch((reason: Error) => setError(reason.message));
+    control<TwitchAuthStatus>("auth/twitch/status").then((status) => { if (active) setTwitch(status); }).catch(() => undefined);
     const update = (snapshot: GameSnapshot) => setGame(snapshot);
     gameSocket.on("game:snapshot", update);
     const timer = window.setInterval(() => setNow(Date.now()), 200);
@@ -64,6 +74,19 @@ export function App() {
     }
   }
 
+  async function runTwitch(path: string) {
+    setBusy(true);
+    setError("");
+    try {
+      await control(path);
+      setTwitch(await control<TwitchAuthStatus>("auth/twitch/status"));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Could not update the Twitch connection.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!game) {
     return <main className="loading-screen"><span className="rift-mark">R</span><p>Opening the breach…</p>{error && <p className="error-note">{error}</p>}</main>;
   }
@@ -77,7 +100,7 @@ export function App() {
       {!isOverlay && <header className="topbar">
         <a className="wordmark" href="/" aria-label="RIFT studio home"><span className="wordmark-icon">R</span><span>RIFT<span className="wordmark-separator">/</span>RAID CONTROL</span></a>
         <div className="topbar-right">
-          <span className="mode-label"><span className="live-dot" /> LOCAL SIMULATOR</span>
+          <span className="mode-label"><span className="live-dot" /> {game.input.mode === "twitch" ? `TWITCH · ${twitch?.login ?? "CONNECTED"}` : "LOCAL SIMULATOR"}</span>
           <a className="overlay-link" href="/overlay" target="_blank" rel="noreferrer">Open stream overlay <span aria-hidden="true">↗</span></a>
           <div className={`socket-status ${gameSocket.connected ? "is-online" : ""}`}><span className="socket-dot" />{gameSocket.connected ? "SYNCED" : "RECONNECTING"}</div>
         </div>
@@ -160,9 +183,22 @@ export function App() {
               </button>}
             </div>
             <div className="control-divider" />
+            <div className="card-label simulator-label"><span>TWITCH CHAT</span><span className={`twitch-state state-${twitch?.chatStatus ?? "disconnected"}`}><i />{(twitch?.chatStatus ?? "disconnected").toUpperCase()}</span></div>
+            <div className="twitch-connect-row">
+              <span className="twitch-avatar" aria-hidden="true">T</span>
+              <div className="twitch-account-copy">
+                <strong>{twitch?.connected ? `@${twitch.login}` : "Your channel"}</strong>
+                <small>{twitch?.connected ? "Reading chat as your account" : "Authorize chat access"}</small>
+              </div>
+              {!twitch?.connected ? (twitch?.configured ? <a className="connect-twitch" href="/api/auth/twitch/start">Connect <span aria-hidden="true">↗</span></a> : <span className="setup-needed">SETUP NEEDED</span>) : twitch.chatStatus === "connected" ?
+                <button className="disconnect-twitch" disabled={busy} onClick={() => void runTwitch("auth/twitch/disconnect")}>Disconnect</button> :
+                <button className="connect-twitch" disabled={busy} onClick={() => void runTwitch("auth/twitch/reconnect")}>Retry</button>}
+            </div>
+            {!twitch?.configured && <p className="sim-note twitch-setup-note">Add your Twitch app keys to <code>.env</code> to enable live chat.</p>}
+            <div className="control-divider twitch-divider" />
             <div className="card-label simulator-label"><span>SIMULATE CHAT</span><span>12 VIEWERS / WAVE</span></div>
             <div className="sim-actions">
-              {(Object.keys(actionMeta) as Action[]).map((action) => <button key={action} className={`sim-button sim-${action}`} disabled={busy || !isVoting} onClick={() => void run("control/simulate", { action, count: 12 })}>
+              {(Object.keys(actionMeta) as Action[]).map((action) => <button key={action} className={`sim-button sim-${action}`} disabled={busy || !isVoting || game.input.mode !== "simulator"} onClick={() => void run("control/simulate", { action, count: 12 })}>
                 <span>{actionMeta[action].icon}</span><strong>{actionMeta[action].label}<small>12 votes</small></strong><b>+</b>
               </button>)}
             </div>

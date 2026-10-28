@@ -1,6 +1,6 @@
 # RIFT — Twitch Co-op Boss Battle
 
-RIFT is a stream overlay game where Twitch chat votes together to fight an adaptive boss. The current build contains the playable local simulator, server-authoritative battle rules, streamer controls, and a separate OBS overlay route. Twitch account connection is the next implementation milestone.
+RIFT is a stream overlay game where Twitch chat votes together to fight an adaptive boss. The current build contains a playable local simulator, server-authoritative battle rules, streamer controls, a read-only OBS overlay, Twitch OAuth and EventSub chat integration, and optional post-round AI narration.
 
 ## Run locally
 
@@ -12,6 +12,14 @@ npm run dev
 ```
 
 Open `http://localhost:5173` for streamer controls. Open `http://localhost:5173/overlay` as an OBS browser source. The dev server is local-only. Click **Begin encounter**, then use the Attack, Defend, or Riftburst simulator buttons to add 12 distinct viewers to the current round. Votes resolve after 20 seconds; **Resolve the vote** can end a round early.
+
+### Add the overlay to OBS
+
+1. In OBS, add a **Browser** source to the scene used for the stream.
+2. Set its URL to `http://localhost:5173/overlay`, width to `1920`, and height to `1080`.
+3. Keep the RIFT server running while streaming. The overlay reconnects to the local server if its Socket.IO connection drops.
+4. Keep the streamer studio on your desktop at `http://localhost:5173`; use it to start, pause, resolve, and reset the encounter.
+5. For a live demo, connect Twitch in the studio, confirm **CONNECTED**, then type commands in the authorized broadcaster's channel. For rehearsal, keep Twitch disconnected and use the simulator buttons.
 
 ### Quick demo path
 
@@ -41,7 +49,7 @@ The production server serves the built client and API from port 3000. The match 
 
 ## Architecture
 
-The Node server owns game state and timers. Simulator and Twitch chat will both submit the same validated `ChatCommand` shape to the engine. Socket.IO broadcasts snapshots to the studio and read-only overlay. The browser never owns authoritative vote counts or game rules.
+The Node server owns game state and timers. Simulator and Twitch chat both submit the same validated `ChatCommand` shape to the engine. Socket.IO broadcasts snapshots to the studio and read-only overlay. The browser never owns authoritative vote counts or game rules.
 
 ```text
 server/src/game/     game state, deterministic rules, timers
@@ -66,13 +74,15 @@ RIFT subscribes to `channel.chat.message` through Twitch EventSub WebSocket and 
 
 If the account authorizes successfully but chat does not connect, check the exact redirect URI and the EventSub status in the studio, then choose **Retry**. The simulator remains available without Twitch credentials.
 
+The production HTTP smoke check and local simulator do not replace a real-channel rehearsal. Before recording, authorize the intended Twitch channel and confirm that at least one real chat command increments the matching vote on the overlay.
+
 ## Optional AI narration
 
 Copy `.env.example` to `.env` and set `OPENAI_API_KEY` to enable one short narrator line after a round. RIFT sends only the fixed boss/event context, winning action, and aggregate vote counts to the OpenAI Responses API. Chat messages and viewer identities are not sent. The model cannot select or change game effects; on timeout, invalid output, missing key, or API error, the fixed event explanation remains in place. `OPENAI_MODEL` defaults to `gpt-5-mini` and can be changed to another Responses API model available to your account.
 
 ## Current limitations
 
-- Optional AI narration is not connected yet.
+- Live Twitch and optional AI narration still need to be exercised with your own credentials and channel before recording the final demo.
 - Match state is in memory; refreshing a browser is safe, restarting the server resets the match.
 - The controls and overlay are an initial visual pass and still need review at stream and mobile sizes.
 
@@ -80,4 +90,4 @@ Copy `.env.example` to `.env` and set `OPENAI_API_KEY` to enable one short narra
 
 The official submission requires a Twitch-connected project built with Codex, a repository and setup instructions, a project description, the Codex session ID, and a public YouTube demo under three minutes showing the project on Twitch and how Codex was used. The published deadline is **November 2, 2026, 10:00 PM London time**. See the [official rules](https://twitchcon-codex.devpost.com/rules).
 
-The [submission draft and timed demo outline](docs/submission/draft.md) are ready to tailor once the live Twitch path and recording are confirmed.
+The [submission draft and timed demo outline](docs/submission/draft.md) are ready to tailor once the live Twitch path and recording are confirmed. Run `npm test`, `npm run typecheck`, and `npm run build` before recording. The application is local-only by default; do not expose the OAuth control server publicly without adding production session/authentication protections.

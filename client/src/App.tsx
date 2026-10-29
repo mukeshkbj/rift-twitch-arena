@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { control, gameSocket } from "./api/socket.js";
-import type { Action, GameSnapshot } from "./types.js";
+import type { Action, BattleSummary, GameSnapshot } from "./types.js";
 
 interface TwitchAuthStatus {
   configured: boolean;
@@ -32,12 +32,34 @@ function phaseLabel(snapshot: GameSnapshot): string {
   }[snapshot.phase];
 }
 
+function formatBattleSummary(bossName: string, summary: BattleSummary): string {
+  const rounds = `${summary.rounds} ${summary.rounds === 1 ? "round" : "rounds"}`;
+  const actionVotes = `Attack ${summary.votesByAction.attack} · Defend ${summary.votesByAction.defend} · Riftburst ${summary.votesByAction.special}`;
+  const result = summary.outcome === "victory" ? `${bossName} defeated` : `${bossName} held the breach`;
+  const roundLines = summary.roundLog.map((round) => {
+    const action = round.action ? `${round.action === "special" ? "Riftburst" : round.action[0]!.toUpperCase() + round.action.slice(1)} (${round.votesByAction[round.action]} votes)` : "No votes";
+    const counter = round.bossCounter ? ` · Countered by ${round.bossCounter}` : "";
+    const next = round.nextAdaptation ? ` · Warden adapts: ${round.nextAdaptation}` : "";
+    const burst = round.specialBurst ? " · Charged burst" : "";
+    return `R${round.round} ${action} · Warden −${round.bossDamage} · raid −${round.raidDamage}${burst}${counter}${next}`;
+  });
+  return [
+    `RIFT — ${result}`,
+    `${rounds} · ${summary.totalVotes} votes · ${summary.bossDamage} Warden damage · ${summary.raidDamage} raid damage`,
+    `Votes: ${actionVotes}`,
+    `Charged Riftbursts: ${summary.specialBursts}`,
+    ...roundLines,
+    "The crowd fights as one.",
+  ].join("\n");
+}
+
 export function App() {
   const [game, setGame] = useState<GameSnapshot | null>(null);
   const [twitch, setTwitch] = useState<TwitchAuthStatus | null>(null);
   const [now, setNow] = useState(Date.now());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [summaryCopyStatus, setSummaryCopyStatus] = useState("");
   const isOverlay = window.location.pathname === "/overlay";
 
   useEffect(() => {
@@ -64,6 +86,7 @@ export function App() {
   async function run(path: string, body?: unknown) {
     setBusy(true);
     setError("");
+    setSummaryCopyStatus("");
     try {
       const result = await control<GameSnapshot | { snapshot: GameSnapshot }>(path, body, "POST");
       setGame("snapshot" in result ? result.snapshot : result);
@@ -84,6 +107,16 @@ export function App() {
       setError(reason instanceof Error ? reason.message : "Could not update the Twitch connection.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function copyBattleSummary(bossName: string, summary: BattleSummary) {
+    const text = formatBattleSummary(bossName, summary);
+    try {
+      await navigator.clipboard.writeText(text);
+      setSummaryCopyStatus("Battle summary copied.");
+    } catch {
+      setSummaryCopyStatus("Clipboard unavailable. Select the recap text to copy it.");
     }
   }
 
@@ -216,6 +249,13 @@ export function App() {
             <div className="card-label"><span>BATTLE FEED</span><span className="feed-count">{String(game.recentLog.length).padStart(2, "0")}</span></div>
             <ol className="battle-log">{[...game.recentLog].reverse().map((entry) => <li className={`log-${entry.kind}`} key={entry.id}><span className="log-mark" />{entry.text}</li>)}</ol>
           </div>
+          {game.summary && <section className="control-card battle-summary-card" aria-labelledby="battle-summary-title">
+            <div className="card-label"><span>SHAREABLE RECAP</span><span className={`summary-result summary-${game.summary.outcome}`}>{game.summary.outcome === "victory" ? "VICTORY" : "DEFEAT"}</span></div>
+            <h3 id="battle-summary-title">{game.summary.outcome === "victory" ? "The Warden fell." : "The Warden held."}</h3>
+            <p className="battle-summary-text">{formatBattleSummary(game.boss.name, game.summary)}</p>
+            <button className="summary-copy-button" type="button" onClick={() => void copyBattleSummary(game.boss.name, game.summary!)}>Copy battle summary</button>
+            <p className="summary-copy-status" role="status" aria-live="polite">{summaryCopyStatus}</p>
+          </section>}
           <footer className="control-footer"><span>RIFT SYSTEMS</span><span>BUILD 0.1 · LOCAL DEMO</span></footer>
         </aside>}
       </div>

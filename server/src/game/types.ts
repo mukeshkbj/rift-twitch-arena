@@ -25,6 +25,28 @@ export interface Adaptation {
   narration?: string;
 }
 
+export interface BattleSummary {
+  outcome: "victory" | "defeat";
+  rounds: number;
+  totalVotes: number;
+  votesByAction: Record<Action, number>;
+  bossDamage: number;
+  raidDamage: number;
+  specialBursts: number;
+  roundLog: BattleRoundSummary[];
+}
+
+export interface BattleRoundSummary {
+  round: number;
+  action: Action | null;
+  votesByAction: Record<Action, number>;
+  bossDamage: number;
+  raidDamage: number;
+  specialBurst: boolean;
+  bossCounter: string | null;
+  nextAdaptation: string | null;
+}
+
 export interface GameSnapshot {
   matchId: string;
   phase: Phase;
@@ -38,6 +60,7 @@ export interface GameSnapshot {
   totalVoters: number;
   winningAction: Action | null;
   adaptation: Adaptation | null;
+  summary: BattleSummary | null;
   recentLog: BattleLogEntry[];
   input: { mode: InputMode; twitchStatus: TwitchStatus };
   paused: boolean;

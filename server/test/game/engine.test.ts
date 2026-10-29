@@ -100,3 +100,52 @@ test("a terminal result cannot be changed by later rounds or votes", () => {
   assert.equal(engine.submitVote(vote("late-viewer", "special", 99)).accepted, false);
   assert.equal(engine.resolveRound(100).phase, "defeat");
 });
+
+test("stores aggregate match stats as a shareable recap when the raid ends", () => {
+  const engine = new GameEngine();
+  let snapshot = engine.startMatch(0);
+  for (let round = 0; round < RULES.roundLimit && snapshot.phase !== "defeat"; round += 1) {
+    engine.submitVote(vote("returning-viewer", "defend", round + 1));
+    snapshot = engine.resolveRound(round + 2);
+    if (snapshot.phase === "intermission") snapshot = engine.beginNextRound(round + 3);
+  }
+
+  assert.equal(snapshot.phase, "defeat");
+  assert.deepEqual(snapshot.summary, {
+    outcome: "defeat",
+    rounds: RULES.roundLimit,
+    totalVotes: RULES.roundLimit,
+    votesByAction: { attack: 0, defend: RULES.roundLimit, special: 0 },
+    bossDamage: 30,
+    raidDamage: 33,
+    specialBursts: 0,
+    roundLog: [
+      { round: 1, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 3, specialBurst: false, bossCounter: null, nextAdaptation: "Rift Tide" },
+      { round: 2, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 3, specialBurst: false, bossCounter: "Rift Tide", nextAdaptation: "Sunder Pulse" },
+      { round: 3, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 9, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: "Sunder Pulse" },
+      { round: 4, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 9, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: "Sunder Pulse" },
+      { round: 5, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 9, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: null },
+    ],
+  });
+});
+
+test("reports the Warden's defeat and charged specials in a victory recap", () => {
+  const engine = new GameEngine();
+  let snapshot = engine.startMatch(0);
+  for (let round = 0; round < RULES.roundLimit && snapshot.phase !== "victory"; round += 1) {
+    for (let viewer = 0; viewer < 12; viewer += 1) {
+      engine.submitVote(vote(`viewer-${round}-${viewer}`, "special", round + viewer + 1));
+    }
+    snapshot = engine.resolveRound(100 + round);
+    if (snapshot.phase === "intermission") snapshot = engine.beginNextRound(200 + round);
+  }
+
+  assert.equal(snapshot.phase, "victory");
+  assert.equal(snapshot.summary?.outcome, "victory");
+  assert.equal(snapshot.summary?.rounds, 4);
+  assert.equal(snapshot.summary?.totalVotes, 48);
+  assert.equal(snapshot.summary?.bossDamage, 120);
+  assert.equal(snapshot.summary?.specialBursts, 4);
+  assert.equal(snapshot.summary?.roundLog.at(-1)?.bossDamage, 10);
+  assert.equal(snapshot.summary?.roundLog.at(-1)?.specialBurst, true);
+});

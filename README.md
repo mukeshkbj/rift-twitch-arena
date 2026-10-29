@@ -44,6 +44,7 @@ The production server serves the built client and API from port 3000. The match 
 - The most popular action resolves the round. Ties follow a rotating, deterministic priority.
 - Special votes fill the shared Riftburst meter. A charged special deals extra damage.
 - After each round, the boss reacts to repeated crowd choices using a fixed rules table. No AI output controls damage or game state.
+- At the end of a battle, the studio shows a shareable recap with aggregate votes, damage, Riftbursts, and adaptations. Copy it to share; it contains no viewer identities.
 - A quiet round causes no damage to either side.
 - The fight lasts up to five rounds, ending earlier when the boss or raid health reaches zero.
 

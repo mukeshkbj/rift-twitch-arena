@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { RULES, chooseAdaptation, chooseWinningAction, clampHealth } from "./rules.js";
-import type { Action, BattleLogEntry, ChatCommand, GameSnapshot, InputMode, TwitchStatus, VoteResult } from "./types.js";
+import type { Action, BattleLogEntry, BattleRoundSummary, BattleSummary, ChatCommand, GameSnapshot, InputMode, TwitchStatus, VoteResult } from "./types.js";
 
 type Listener = (snapshot: GameSnapshot) => void;
 
@@ -8,6 +8,13 @@ export class GameEngine {
   private snapshot: GameSnapshot;
   private votesByUser = new Map<string, Action>();
   private actionHistory: Action[] = [];
+  private readonly matchTotals = {
+    votesByAction: { attack: 0, defend: 0, special: 0 } as Record<Action, number>,
+    bossDamage: 0,
+    raidDamage: 0,
+    specialBursts: 0,
+    roundLog: [] as BattleRoundSummary[],
+  };
   private tieBreakRound = 0;
   private listeners = new Set<Listener>();
 
@@ -27,6 +34,7 @@ export class GameEngine {
   startMatch(now = Date.now()): GameSnapshot {
     this.votesByUser.clear();
     this.actionHistory = [];
+    this.resetMatchTotals();
     this.tieBreakRound = 0;
     const mode = this.snapshot.input.mode;
     const twitchStatus = this.snapshot.input.twitchStatus;
@@ -76,6 +84,7 @@ export class GameEngine {
 
     const votes = winner ? this.snapshot.votes[winner] : 0;
     const chargedSpecial = winner === "special" && this.snapshot.crowd.specialCharge >= RULES.specialThreshold;
+    if (chargedSpecial) this.matchTotals.specialBursts += 1;
     const adaptation = this.snapshot.adaptation;
     let bossDamage = 0;
     let crowdDamage = 0;
@@ -99,8 +108,17 @@ export class GameEngine {
       }
     }
 
-    this.snapshot.boss.health = clampHealth(this.snapshot.boss.health - bossDamage, this.snapshot.boss.maxHealth);
-    this.snapshot.crowd.health = clampHealth(this.snapshot.crowd.health - crowdDamage, this.snapshot.crowd.maxHealth);
+    const bossHealthBefore = this.snapshot.boss.health;
+    const crowdHealthBefore = this.snapshot.crowd.health;
+    this.snapshot.boss.health = clampHealth(bossHealthBefore - bossDamage, this.snapshot.boss.maxHealth);
+    this.snapshot.crowd.health = clampHealth(crowdHealthBefore - crowdDamage, this.snapshot.crowd.maxHealth);
+    this.matchTotals.votesByAction.attack += this.snapshot.votes.attack;
+    this.matchTotals.votesByAction.defend += this.snapshot.votes.defend;
+    this.matchTotals.votesByAction.special += this.snapshot.votes.special;
+    const bossDamageDealt = bossHealthBefore - this.snapshot.boss.health;
+    const raidDamageTaken = crowdHealthBefore - this.snapshot.crowd.health;
+    this.matchTotals.bossDamage += bossDamageDealt;
+    this.matchTotals.raidDamage += raidDamageTaken;
     if (winner) this.addLog(`${winner.toUpperCase()} wins the vote · ${bossDamage} damage to the Warden.`, "crowd");
     if (crowdDamage > 0) this.addLog(`The Warden strikes back for ${crowdDamage}.`, "boss");
 
@@ -115,6 +133,20 @@ export class GameEngine {
       this.snapshot.adaptation = chooseAdaptation(this.actionHistory);
       this.snapshot.boss.stance = this.snapshot.adaptation.title;
       this.addLog(this.snapshot.adaptation.explanation, "boss");
+    }
+    const nextAdaptation = this.snapshot.phase === "intermission" ? this.snapshot.adaptation?.title ?? null : null;
+    this.matchTotals.roundLog.push({
+      round: this.snapshot.round,
+      action: winner,
+      votesByAction: { ...this.snapshot.votes },
+      bossDamage: bossDamageDealt,
+      raidDamage: raidDamageTaken,
+      specialBurst: chargedSpecial,
+      bossCounter: adaptation?.title ?? null,
+      nextAdaptation,
+    });
+    if (this.snapshot.phase === "victory" || this.snapshot.phase === "defeat") {
+      this.snapshot.summary = this.createSummary(this.snapshot.phase);
     }
     this.snapshot.remainingMs = 0;
     return this.publish();
@@ -176,6 +208,7 @@ export class GameEngine {
     const twitchStatus = this.snapshot.input.twitchStatus;
     this.votesByUser.clear();
     this.actionHistory = [];
+    this.resetMatchTotals();
     this.tieBreakRound = 0;
     this.snapshot = this.newSnapshot();
     this.snapshot.input = { mode, twitchStatus };
@@ -196,6 +229,7 @@ export class GameEngine {
       totalVoters: 0,
       winningAction: null,
       adaptation: null,
+      summary: null,
       recentLog: [{ id: randomUUID(), text: "The Hollow Warden waits beyond the breach.", kind: "system" }],
       input: { mode: "simulator", twitchStatus: "disconnected" },
       paused: false,
@@ -207,6 +241,28 @@ export class GameEngine {
       ...this.snapshot.recentLog,
       { id: randomUUID(), text, kind },
     ].slice(-RULES.maxLogEntries);
+  }
+
+  private resetMatchTotals(): void {
+    this.matchTotals.votesByAction = { attack: 0, defend: 0, special: 0 };
+    this.matchTotals.bossDamage = 0;
+    this.matchTotals.raidDamage = 0;
+    this.matchTotals.specialBursts = 0;
+    this.matchTotals.roundLog = [];
+  }
+
+  private createSummary(outcome: BattleSummary["outcome"]): BattleSummary {
+    const votesByAction = { ...this.matchTotals.votesByAction };
+    return {
+      outcome,
+      rounds: this.snapshot.round,
+      totalVotes: votesByAction.attack + votesByAction.defend + votesByAction.special,
+      votesByAction,
+      bossDamage: this.matchTotals.bossDamage,
+      raidDamage: this.matchTotals.raidDamage,
+      specialBursts: this.matchTotals.specialBursts,
+      roundLog: this.matchTotals.roundLog.map((round) => ({ ...round, votesByAction: { ...round.votesByAction } })),
+    };
   }
 
   private publish(): GameSnapshot {

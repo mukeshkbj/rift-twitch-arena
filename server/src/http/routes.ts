@@ -135,7 +135,7 @@ export function createRoutes({ engine, oauth, twitch, narrator }: RouteDependenc
 
   router.post("/control/start", (_request, response) => response.json(engine.startMatch()));
   router.post("/control/reset", (_request, response) => response.json(engine.resetMatch()));
-  router.post("/control/resolve", (_request, response) => response.json(engine.resolveRound()));
+  router.post("/control/resolve", (_request, response) => response.json(engine.beginResolution()));
   router.post("/control/pause", (_request, response) => response.json(engine.pauseVoting()));
   router.post("/control/resume", (_request, response) => response.json(engine.resumeVoting()));
   router.post("/control/simulate", (request, response) => {

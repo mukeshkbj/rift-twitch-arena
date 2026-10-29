@@ -38,11 +38,13 @@ test("accepts short plain text and sends only aggregate event context", async (t
 
   const result = await narrator.narrate(intermissionSnapshot());
   assert.equal(result, "The Warden raises its iron guard.");
-  const payload = JSON.parse(requestBody) as { input: string };
+  const payload = JSON.parse(requestBody) as { input: string; reasoning: { effort: string }; max_output_tokens: number };
   const input = JSON.parse(payload.input) as Record<string, unknown>;
   assert.equal(JSON.stringify(input).includes("PrivateViewer"), false);
   assert.equal(JSON.stringify(input).includes("viewer-1"), false);
   assert.ok(input.votes);
+  assert.equal(payload.reasoning.effort, "minimal");
+  assert.equal(payload.max_output_tokens, 128);
 });
 
 test("rejects narration that exceeds the word limit or contains markup", async (t) => {

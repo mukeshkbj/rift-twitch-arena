@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "concurrently -k \"tsx watch server/src/index.ts\" \"vite\"",
     "build": "tsc -p tsconfig.server.json && vite build",
-    "start": "node dist/server/index.js",
+    "start": "node --import ./server/production-env.mjs dist/server/index.js",
     "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.client.json --noEmit",
     "test": "node --import tsx --test"
   },

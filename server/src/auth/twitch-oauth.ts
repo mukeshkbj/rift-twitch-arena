@@ -49,11 +49,12 @@ export class TwitchOAuth {
   private readonly pendingStates = new Map<string, number>();
 
   constructor(env: NodeJS.ProcessEnv = process.env) {
+    const port = env.PORT?.trim() || "3000";
     this.config = {
       clientId: env.TWITCH_CLIENT_ID?.trim() ?? "",
       clientSecret: env.TWITCH_CLIENT_SECRET?.trim() ?? "",
       redirectUri: env.TWITCH_REDIRECT_URI?.trim() || "http://localhost:3000/api/auth/twitch/callback",
-      appBaseUrl: env.APP_BASE_URL?.trim() || (env.NODE_ENV === "production" ? "http://localhost:3000" : "http://localhost:5173"),
+      appBaseUrl: env.APP_BASE_URL?.trim() || (env.NODE_ENV === "production" ? `http://localhost:${port}` : "http://localhost:5173"),
     };
   }
 

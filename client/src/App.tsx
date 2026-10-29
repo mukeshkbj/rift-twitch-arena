@@ -125,7 +125,7 @@ export function App() {
   }
 
   const timeSeconds = Math.ceil(remainingMs / 1000);
-  const timePct = Math.max(0, Math.min(100, (remainingMs / 20_000) * 100));
+  const timePct = Math.max(0, Math.min(100, (remainingMs / game.voteDurationMs) * 100));
   const isVoting = game.phase === "voting" && !game.paused;
 
   return (
@@ -194,6 +194,31 @@ export function App() {
               {Array.from({ length: game.crowd.specialThreshold }, (_, index) => <span className={index < game.crowd.specialCharge ? "charged" : ""} key={index} />)}
             </div></div>
           </section>
+          {isOverlay && <div className="overlay-story" aria-live="polite">
+            {game.phase === "resolving" && <section className="overlay-result overlay-resolving">
+              <span>ROUND {String(game.round).padStart(2, "0")} · VOTE LOCKED</span>
+              <strong>{game.winningAction ? `${actionMeta[game.winningAction].label} is striking` : "The channel was quiet"}</strong>
+            </section>}
+            {game.phase !== "resolving" && !game.summary && game.roundResult && <section className="overlay-result">
+              <span>ROUND {String(game.roundResult.round).padStart(2, "0")} · RESULT</span>
+              <strong>{game.roundResult.action ? `${actionMeta[game.roundResult.action].label} wins the vote` : "The channel was quiet"}</strong>
+              <p>{game.roundResult.action ? `${game.roundResult.votesByAction[game.roundResult.action]} votes` : "No votes"} · Warden −{game.roundResult.bossDamage} · raid −{game.roundResult.raidDamage}{game.roundResult.specialBurst ? " · CHARGED RIFTBURST" : ""}</p>
+            </section>}
+            {game.adaptation && !game.summary && <section className="overlay-adaptation">
+              <span>WARDEN RESPONSE · {game.adaptation.title}</span>
+              <p>{game.adaptation.explanation}</p>
+              {game.adaptation.narration && <strong className="overlay-narration">{game.adaptation.narration}</strong>}
+            </section>}
+            {game.summary && <section className="overlay-summary">
+              <span>RAID RECAP · {game.summary.outcome === "victory" ? "VICTORY" : "DEFEAT"}</span>
+              <p>{game.summary.rounds} rounds · {game.summary.totalVotes} votes · {game.summary.bossDamage} Warden damage · {game.summary.raidDamage} raid damage · {game.summary.specialBursts} charged Riftbursts</p>
+              <ol>{game.summary.roundLog.map((round) => <li key={round.round}>R{round.round} {round.action ? actionMeta[round.action].label : "Quiet"}{round.nextAdaptation ? ` → ${round.nextAdaptation}` : ""}</li>)}</ol>
+            </section>}
+            {game.recentLog.length > 1 && <section className="overlay-battle-feed" aria-label="Recent battle feed">
+              <span>BATTLE FEED</span>
+              <ol>{[...game.recentLog].slice(-3).reverse().map((entry) => <li key={entry.id}>{entry.text}</li>)}</ol>
+            </section>}
+          </div>}
         </section>
 
         {!isOverlay && <aside className="control-column" aria-label="Streamer controls">
@@ -213,7 +238,7 @@ export function App() {
             <div className="primary-actions">
               {game.phase === "lobby" || game.phase === "victory" || game.phase === "defeat" ?
                 <button className="button-primary" disabled={busy} onClick={() => void run("control/start")}><span>▶</span> {game.phase === "lobby" ? "Begin encounter" : "Run it back"}</button> :
-                <button className="button-primary" disabled={busy || game.phase !== "voting"} onClick={() => void run("control/resolve")}><span>↯</span> Resolve the vote</button>}
+                <button className="button-primary" disabled={busy || game.phase !== "voting"} onClick={() => void run("control/resolve")}><span>↯</span> {game.phase === "resolving" ? "Resolving…" : "Resolve the vote"}</button>}
               {game.phase === "voting" && <button className="button-secondary" disabled={busy} onClick={() => void run(game.paused ? "control/resume" : "control/pause")}>
                 <span>{game.paused ? "▶" : "Ⅱ"}</span>{game.paused ? "Resume voting" : "Pause voting"}
               </button>}

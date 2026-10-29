@@ -3,13 +3,22 @@ import type { Action, Adaptation } from "./types.js";
 export const RULES = {
   bossName: "The Hollow Warden",
   bossHealth: 120,
+  minimumBossHealth: 36,
+  audienceScaleLimit: 12,
   crowdHealth: 78,
   roundLimit: 5,
   voteDurationMs: 20_000,
   intermissionMs: 5_000,
+  resolutionDurationMs: 1_200,
   specialThreshold: 5,
   maxLogEntries: 7,
 } as const;
+
+export function bossHealthForAudience(audienceSize: number): number {
+  const viewers = Math.max(1, Math.min(RULES.audienceScaleLimit, Math.floor(audienceSize)));
+  const healthRange = RULES.bossHealth - RULES.minimumBossHealth;
+  return Math.round(RULES.minimumBossHealth + healthRange * (viewers - 1) / (RULES.audienceScaleLimit - 1));
+}
 
 const TIE_PRIORITY: Action[] = ["attack", "defend", "special"];
 

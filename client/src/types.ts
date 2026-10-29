@@ -30,11 +30,13 @@ export interface GameSnapshot {
   roundLimit: number;
   deadlineAt: number | null;
   remainingMs: number;
+  voteDurationMs: number;
   boss: { name: string; health: number; maxHealth: number; stance: string };
   crowd: { health: number; maxHealth: number; specialCharge: number; specialThreshold: number };
   votes: Record<Action, number>;
   totalVoters: number;
   winningAction: Action | null;
+  roundResult: BattleRoundSummary | null;
   adaptation: { eventId: string; title: string; explanation: string; narration?: string } | null;
   summary: BattleSummary | null;
   recentLog: Array<{ id: string; text: string; kind: "system" | "crowd" | "boss" }>;

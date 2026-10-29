@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { GameEngine } from "../../src/game/engine.js";
-import { RULES, chooseAdaptation, chooseWinningAction, clampHealth } from "../../src/game/rules.js";
+import { RULES, bossHealthForAudience, chooseAdaptation, chooseWinningAction, clampHealth } from "../../src/game/rules.js";
 import type { Action, ChatCommand } from "../../src/game/types.js";
 
 function vote(userId: string, action: Action, receivedAt = 1): ChatCommand {
@@ -28,10 +28,26 @@ test("accepts one vote per viewer in a round and clears the limit next round", (
 test("rejects votes before a match, while paused, and after the deadline", () => {
   const engine = new GameEngine();
   assert.equal(engine.submitVote(vote("viewer-1", "attack")).accepted, false);
-  engine.startMatch(100);
+  assert.equal(engine.startMatch(100).voteDurationMs, RULES.voteDurationMs);
   assert.equal(engine.submitVote(vote("viewer-1", "attack", 100 + RULES.voteDurationMs + 1)).accepted, false);
   engine.pauseVoting(200);
   assert.equal(engine.submitVote(vote("viewer-2", "attack", 201)).accepted, false);
+});
+
+test("publishes a distinct resolving phase before applying round damage", () => {
+  const engine = new GameEngine();
+  engine.startMatch(0);
+  engine.submitVote(vote("viewer-1", "attack", 1));
+  const bossHealthBefore = engine.getSnapshot().boss.health;
+
+  const resolving = engine.beginResolution();
+  assert.equal(resolving.phase, "resolving");
+  assert.equal(resolving.winningAction, "attack");
+  assert.equal(resolving.boss.health, bossHealthBefore);
+
+  const completed = engine.resolveRound();
+  assert.equal(completed.phase, "intermission");
+  assert.equal(completed.roundResult?.bossDamage, 10);
 });
 
 test("rotates deterministic priority for tied actions", () => {
@@ -57,6 +73,21 @@ test("clamps health to valid bounds", () => {
   assert.equal(clampHealth(-1, 20), 0);
   assert.equal(clampHealth(21, 20), 20);
   assert.equal(clampHealth(12, 20), 12);
+});
+
+test("scales Warden health from a solo viewer to the twelve-viewer baseline", () => {
+  assert.equal(bossHealthForAudience(1), RULES.minimumBossHealth);
+  assert.ok(bossHealthForAudience(3) < bossHealthForAudience(5));
+  assert.equal(bossHealthForAudience(12), RULES.bossHealth);
+  assert.equal(bossHealthForAudience(24), RULES.bossHealth);
+
+  const engine = new GameEngine();
+  const initial = engine.startMatch(0);
+  assert.equal(initial.boss.maxHealth, RULES.minimumBossHealth);
+  engine.submitVote(vote("viewer-1", "attack", 1));
+  assert.equal(engine.getSnapshot().boss.maxHealth, RULES.minimumBossHealth);
+  engine.submitVote(vote("viewer-2", "attack", 1));
+  assert.equal(engine.getSnapshot().boss.maxHealth, bossHealthForAudience(2));
 });
 
 test("adapts to repeated choices and rotates a fallback without a repeated pattern", () => {
@@ -117,14 +148,14 @@ test("stores aggregate match stats as a shareable recap when the raid ends", () 
     totalVotes: RULES.roundLimit,
     votesByAction: { attack: 0, defend: RULES.roundLimit, special: 0 },
     bossDamage: 30,
-    raidDamage: 33,
+    raidDamage: 64,
     specialBursts: 0,
     roundLog: [
-      { round: 1, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 3, specialBurst: false, bossCounter: null, nextAdaptation: "Rift Tide" },
-      { round: 2, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 3, specialBurst: false, bossCounter: "Rift Tide", nextAdaptation: "Sunder Pulse" },
-      { round: 3, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 9, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: "Sunder Pulse" },
-      { round: 4, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 9, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: "Sunder Pulse" },
-      { round: 5, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 9, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: null },
+      { round: 1, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 5, specialBurst: false, bossCounter: null, nextAdaptation: "Rift Tide" },
+      { round: 2, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 5, specialBurst: false, bossCounter: "Rift Tide", nextAdaptation: "Sunder Pulse" },
+      { round: 3, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 18, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: "Sunder Pulse" },
+      { round: 4, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 18, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: "Sunder Pulse" },
+      { round: 5, action: "defend", votesByAction: { attack: 0, defend: 1, special: 0 }, bossDamage: 6, raidDamage: 18, specialBurst: false, bossCounter: "Sunder Pulse", nextAdaptation: null },
     ],
   });
 });
@@ -148,4 +179,38 @@ test("reports the Warden's defeat and charged specials in a victory recap", () =
   assert.equal(snapshot.summary?.specialBursts, 4);
   assert.equal(snapshot.summary?.roundLog.at(-1)?.bossDamage, 10);
   assert.equal(snapshot.summary?.roundLog.at(-1)?.specialBurst, true);
+});
+
+test("lets solo, three-viewer, and five-viewer raids win with a coordinated special strategy", () => {
+  for (const audienceSize of [1, 3, 5]) {
+    const engine = new GameEngine();
+    let snapshot = engine.startMatch(0);
+    for (let round = 0; round < RULES.roundLimit && snapshot.phase !== "victory"; round += 1) {
+      for (let viewer = 0; viewer < audienceSize; viewer += 1) {
+        engine.submitVote(vote(`viewer-${viewer}`, "special", round * 100 + viewer + 1));
+      }
+      snapshot = engine.resolveRound(round * 100 + 50);
+      if (snapshot.phase === "intermission") snapshot = engine.beginNextRound(round * 100 + 60);
+    }
+    assert.equal(snapshot.phase, "victory", `${audienceSize} viewers should be able to win`);
+    assert.ok(snapshot.summary!.rounds <= RULES.roundLimit);
+  }
+});
+
+test("allows an outmatched raid to lose all health before the round limit", () => {
+  const engine = new GameEngine();
+  let snapshot = engine.startMatch(0);
+  const actions: Action[] = ["defend", "defend", "attack", "attack", "attack"];
+
+  for (let round = 0; round < actions.length; round += 1) {
+    for (let viewer = 0; viewer < 12; viewer += 1) {
+      engine.submitVote(vote(`viewer-${viewer}`, actions[round]!, round * 100 + viewer + 1));
+    }
+    snapshot = engine.resolveRound(round * 100 + 50);
+    if (snapshot.phase === "intermission") snapshot = engine.beginNextRound(round * 100 + 60);
+  }
+
+  assert.equal(snapshot.phase, "defeat");
+  assert.equal(snapshot.crowd.health, 0);
+  assert.equal(snapshot.round, 5);
 });

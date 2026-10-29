@@ -23,6 +23,11 @@ test("authorization URL requests the minimal chat scope and a random state", () 
   assert.notEqual(first.searchParams.get("state"), second.searchParams.get("state"));
 });
 
+test("production URL defaults to the server port, while development uses Vite", () => {
+  assert.equal(new TwitchOAuth({ PORT: "3017", NODE_ENV: "production" } as NodeJS.ProcessEnv).getAppBaseUrl(), "http://localhost:3017");
+  assert.equal(new TwitchOAuth({ PORT: "3017", NODE_ENV: "development" } as NodeJS.ProcessEnv).getAppBaseUrl(), "http://localhost:5173");
+});
+
 test("authorization state is one-time and account tokens stay server-side", async (t) => {
   const oauth = configuredOAuth();
   const url = new URL(oauth.createAuthorizationUrl());

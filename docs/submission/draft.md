@@ -39,10 +39,10 @@ See the repository README for Node.js requirements, local launch, Twitch app reg
 
 ## Repository and video
 
-- Repository: `[public or judge-accessible repository URL]`
-- YouTube demo: `[public or unlisted video URL, under 3 minutes]`
+- Repository: [https://github.com/mukeshkbj/rift-twitch-arena](https://github.com/mukeshkbj/rift-twitch-arena)
+- YouTube demo: `[public YouTube video URL, under 3 minutes]`
 
-## Demo video outline (target: 2:50)
+## Demo video outline (target: 2:55)
 
 | Time | Show | Narration |
 |---|---|---|
@@ -57,7 +57,7 @@ See the repository README for Node.js requirements, local launch, Twitch app reg
 
 ## Recording notes
 
-- Show the project functioning with real Twitch chat; simulator footage alone does not satisfy the demo requirement.
+- Show the project functioning with real Twitch chat; simulator footage alone does not satisfy the demo requirement. Use another Twitch account to send commands because broadcaster messages are ignored.
 - Show the Codex session used to build the project. Keep any API secrets, OAuth tokens, and private account details off-screen.
-- Keep the upload under three minutes and use public or unlisted visibility.
+- Keep the upload under three minutes and set its YouTube visibility to public.
 - Use original or properly licensed visual/audio assets. Follow the current [official hackathon rules](https://twitchcon-codex.devpost.com/rules) for trademarks and copyrighted material.

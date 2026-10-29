@@ -3,6 +3,7 @@ import { RULES } from "./rules.js";
 
 export class GameScheduler {
   private deadlineTimer: ReturnType<typeof setTimeout> | undefined;
+  private resolutionTimer: ReturnType<typeof setTimeout> | undefined;
   private intermissionTimer: ReturnType<typeof setTimeout> | undefined;
   private unsubscribe: (() => void) | undefined;
 
@@ -17,9 +18,19 @@ export class GameScheduler {
         this.deadlineTimer = setTimeout(() => {
           const current = this.engine.getSnapshot();
           if (current.matchId === matchId && current.round === round && current.phase === "voting") {
-            this.engine.resolveRound();
+            this.engine.beginResolution();
           }
         }, Math.max(0, snapshot.deadlineAt - Date.now()));
+      }
+      if (snapshot.phase === "resolving") {
+        const matchId = snapshot.matchId;
+        const round = snapshot.round;
+        this.resolutionTimer = setTimeout(() => {
+          const current = this.engine.getSnapshot();
+          if (current.matchId === matchId && current.round === round && current.phase === "resolving") {
+            this.engine.resolveRound();
+          }
+        }, RULES.resolutionDurationMs);
       }
       if (snapshot.phase === "intermission") {
         const matchId = snapshot.matchId;
@@ -41,8 +52,10 @@ export class GameScheduler {
 
   private clearTimers(): void {
     if (this.deadlineTimer) clearTimeout(this.deadlineTimer);
+    if (this.resolutionTimer) clearTimeout(this.resolutionTimer);
     if (this.intermissionTimer) clearTimeout(this.intermissionTimer);
     this.deadlineTimer = undefined;
+    this.resolutionTimer = undefined;
     this.intermissionTimer = undefined;
   }
 }

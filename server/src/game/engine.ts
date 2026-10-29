@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { RULES, chooseAdaptation, chooseWinningAction, clampHealth } from "./rules.js";
+import { RULES, bossHealthForAudience, chooseAdaptation, chooseWinningAction, clampHealth } from "./rules.js";
 import type { Action, BattleLogEntry, BattleRoundSummary, BattleSummary, ChatCommand, GameSnapshot, InputMode, TwitchStatus, VoteResult } from "./types.js";
 
 type Listener = (snapshot: GameSnapshot) => void;
@@ -7,6 +7,7 @@ type Listener = (snapshot: GameSnapshot) => void;
 export class GameEngine {
   private snapshot: GameSnapshot;
   private votesByUser = new Map<string, Action>();
+  private viewersInMatch = new Set<string>();
   private actionHistory: Action[] = [];
   private readonly matchTotals = {
     votesByAction: { attack: 0, defend: 0, special: 0 } as Record<Action, number>,
@@ -33,6 +34,7 @@ export class GameEngine {
 
   startMatch(now = Date.now()): GameSnapshot {
     this.votesByUser.clear();
+    this.viewersInMatch.clear();
     this.actionHistory = [];
     this.resetMatchTotals();
     this.tieBreakRound = 0;
@@ -60,6 +62,15 @@ export class GameEngine {
     }
 
     this.votesByUser.set(command.userId, command.action);
+    if (!this.viewersInMatch.has(command.userId)) {
+      this.viewersInMatch.add(command.userId);
+      const nextMaxHealth = bossHealthForAudience(this.viewersInMatch.size);
+      const addedHealth = nextMaxHealth - this.snapshot.boss.maxHealth;
+      if (addedHealth > 0) {
+        this.snapshot.boss.maxHealth = nextMaxHealth;
+        this.snapshot.boss.health = Math.min(nextMaxHealth, this.snapshot.boss.health + addedHealth);
+      }
+    }
     this.snapshot.votes[command.action] += 1;
     this.snapshot.totalVoters += 1;
     if (command.action === "special") {
@@ -72,14 +83,20 @@ export class GameEngine {
     return { accepted: true, snapshot: this.getSnapshot() };
   }
 
-  resolveRound(now = Date.now()): GameSnapshot {
+  beginResolution(): GameSnapshot {
     if (this.snapshot.phase !== "voting" || this.snapshot.paused) return this.getSnapshot();
     this.snapshot.phase = "resolving";
     this.snapshot.deadlineAt = null;
     this.snapshot.remainingMs = 0;
     const hadVotes = this.snapshot.totalVoters > 0;
-    const winner = hadVotes ? chooseWinningAction(this.snapshot.votes, ++this.tieBreakRound) : null;
-    this.snapshot.winningAction = winner;
+    this.snapshot.winningAction = hadVotes ? chooseWinningAction(this.snapshot.votes, ++this.tieBreakRound) : null;
+    return this.publish();
+  }
+
+  resolveRound(_now = Date.now()): GameSnapshot {
+    if (this.snapshot.phase === "voting") this.beginResolution();
+    if (this.snapshot.phase !== "resolving") return this.getSnapshot();
+    const winner = this.snapshot.winningAction;
     if (winner) this.actionHistory.push(winner);
 
     const votes = winner ? this.snapshot.votes[winner] : 0;
@@ -93,14 +110,14 @@ export class GameEngine {
       this.addLog("The channel was quiet. The Warden holds its position; no one takes damage.", "system");
     } else if (winner === "attack") {
       bossDamage = 9 + Math.min(9, votes);
-      crowdDamage = adaptation?.eventId === "sunder-pulse" ? 13 : 8;
+      crowdDamage = adaptation?.eventId === "sunder-pulse" ? 26 : 18;
       if (adaptation?.eventId === "iron-bloom") bossDamage = Math.max(5, bossDamage - 6);
     } else if (winner === "defend") {
       bossDamage = 5 + Math.min(6, votes);
-      crowdDamage = adaptation?.eventId === "sunder-pulse" ? 9 : 3;
+      crowdDamage = adaptation?.eventId === "sunder-pulse" ? 18 : 5;
     } else {
       bossDamage = 15 + Math.min(12, votes * 2) + (chargedSpecial ? 12 : 0);
-      crowdDamage = adaptation?.eventId === "sunder-pulse" ? 14 : 10;
+      crowdDamage = adaptation?.eventId === "sunder-pulse" ? 22 : 18;
       if (adaptation?.eventId === "rift-static") bossDamage = Math.max(8, bossDamage - 7);
       if (chargedSpecial) {
         this.snapshot.crowd.specialCharge = 0;
@@ -145,6 +162,7 @@ export class GameEngine {
       bossCounter: adaptation?.title ?? null,
       nextAdaptation,
     });
+    this.snapshot.roundResult = this.matchTotals.roundLog.at(-1) ?? null;
     if (this.snapshot.phase === "victory" || this.snapshot.phase === "defeat") {
       this.snapshot.summary = this.createSummary(this.snapshot.phase);
     }
@@ -155,6 +173,7 @@ export class GameEngine {
   beginNextRound(now = Date.now()): GameSnapshot {
     if (this.snapshot.phase !== "intermission") return this.getSnapshot();
     this.votesByUser.clear();
+    this.viewersInMatch.clear();
     this.snapshot.round += 1;
     this.snapshot.votes = { attack: 0, defend: 0, special: 0 };
     this.snapshot.totalVoters = 0;
@@ -162,7 +181,8 @@ export class GameEngine {
     this.snapshot.phase = "voting";
     this.snapshot.deadlineAt = now + RULES.voteDurationMs;
     this.snapshot.remainingMs = RULES.voteDurationMs;
-    this.addLog(`Round ${this.snapshot.round}. The crowd has 20 seconds to choose.`, "system");
+    const voteSeconds = Math.ceil(RULES.voteDurationMs / 1000);
+    this.addLog(`Round ${this.snapshot.round}. The crowd has ${voteSeconds} seconds to choose.`, "system");
     return this.publish();
   }
 
@@ -223,11 +243,13 @@ export class GameEngine {
       roundLimit: RULES.roundLimit,
       deadlineAt: null,
       remainingMs: 0,
-      boss: { name: RULES.bossName, health: RULES.bossHealth, maxHealth: RULES.bossHealth, stance: "Watching" },
+      voteDurationMs: RULES.voteDurationMs,
+      boss: { name: RULES.bossName, health: RULES.minimumBossHealth, maxHealth: RULES.minimumBossHealth, stance: "Watching" },
       crowd: { health: RULES.crowdHealth, maxHealth: RULES.crowdHealth, specialCharge: 0, specialThreshold: RULES.specialThreshold },
       votes: { attack: 0, defend: 0, special: 0 },
       totalVoters: 0,
       winningAction: null,
+      roundResult: null,
       adaptation: null,
       summary: null,
       recentLog: [{ id: randomUUID(), text: "The Hollow Warden waits beyond the breach.", kind: "system" }],

@@ -49,7 +49,8 @@ export class EncounterNarrator {
             crowdAction: snapshot.winningAction,
             votes: snapshot.votes,
           }),
-          max_output_tokens: 48,
+          reasoning: { effort: "minimal" },
+          max_output_tokens: 128,
           store: false,
         }),
       });

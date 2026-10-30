@@ -16,7 +16,7 @@ RIFT makes Twitch chat part of the game. Viewers type `!attack`, `!defend`, or `
 
 Streamers control the encounter from a compact studio panel and add the overlay to OBS as a browser source. A local simulator supports setup and rehearsal; live mode reads commands from the broadcaster’s authorized Twitch channel through EventSub. The server resolves the votes, health, timers, and outcomes. After the fight, RIFT creates a shareable recap from aggregate match stats without viewer identities.
 
-RIFT was built with OpenAI Codex. Codex helped shape the deterministic game loop, implement the adaptive Warden and Twitch EventSub integration, build the streamer studio and OBS overlay, and add tests for voting, match outcomes, authentication, and recap behavior. The submitted Codex clip will show a concrete scheduler fix and its passing verification.
+RIFT was built with OpenAI Codex. Codex helped shape the deterministic game loop, implement the adaptive Warden and Twitch EventSub integration, build the streamer studio and OBS overlay, and add tests for voting, match outcomes, authentication, and recap behavior. The Codex clip will show the Twitch-control hardening commit authored by OpenAI Codex (`6dd839f`), then the current round-timer tests and build.
 
 ## Features
 
@@ -30,7 +30,7 @@ RIFT was built with OpenAI Codex. Codex helped shape the deterministic game loop
 
 ## How to run
 
-See the repository README for Node.js requirements, local launch, Twitch app registration, OAuth redirect URI, OBS setup, and optional AI configuration.
+See the repository README for Node.js requirements, local launch, Twitch app registration, OAuth redirect URI, and OBS setup.
 
 ## Codex session ID
 
@@ -51,7 +51,7 @@ See the repository README for Node.js requirements, local launch, Twitch app reg
 | 1:20–1:50 | Repeat one tactic, then reveal the boss counter and explanation | “The Warden tracks recent group choices and answers repeated strategies with a fixed, explainable counter.” |
 | 1:50–2:10 | Show the special charge/payoff and streamer pause/reset controls | “The streamer keeps control, and coordinated special votes build a shared payoff.” |
 | 2:10–2:25 | Show the end-of-fight recap and copy action | “RIFT captures the result and crowd strategy in a recap with aggregate stats, ready to share.” |
-| 2:25–2:42 | Show the Codex session, the scheduler change, and passing tests/build | “Codex helped make each round timer stable through live updates, and verified the change with the project checks.” |
+| 2:25–2:42 | Show the Codex session, `6dd839f` in Git history, and passing timer tests/build | “Codex helped secure the Twitch controls and keep round timing stable through live updates. The project checks pass.” |
 | 2:42–2:55 | Return to the full arena and show the project title | “RIFT: the crowd fights as one.” |
 
 ## Recording notes

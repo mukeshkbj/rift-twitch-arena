@@ -4,7 +4,7 @@
 
 **Deadline:** November 2, 2026 at 2:00 PM Pacific, which is 10:00 PM London time. Target submission by 6:00 PM London to leave a four-hour buffer.
 
-**Current state (October 30):** `origin/main` points to `669365d`. The local candidate removes optional AI narration, keeps match-wide viewer health scaling, and preserves resolve/intermission timers through unrelated updates. `npm test` passes (23 tests), and typecheck and production build pass. `submission-assets/` is ignored. The submission draft has the repository URL and Codex session ID; the public YouTube URL is still pending because the real Twitch-chat and Codex clips are not recorded yet.
+**Current state (October 30):** Commit `184ed43` is pushed to `origin/main`. It removes optional AI narration, keeps match-wide viewer health scaling, and preserves resolve/intermission timers through unrelated updates. `npm test` passes (23 tests), and typecheck and production build pass. `submission-assets/` is ignored. The submission draft has the repository URL and Codex session ID; the public YouTube URL is still pending because the real Twitch-chat and Codex clips are not recorded yet.
 
 ## Work plan
 

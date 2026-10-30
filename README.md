@@ -1,6 +1,6 @@
 # RIFT — Twitch Co-op Boss Battle
 
-RIFT is a stream overlay game where Twitch chat votes together to fight an adaptive boss. The current build contains a playable local simulator, server-authoritative battle rules, streamer controls, a read-only OBS overlay, Twitch OAuth and EventSub chat integration, and optional post-round AI narration.
+RIFT is a stream overlay game where Twitch chat votes together to fight an adaptive boss. The Warden adapts to repeated crowd strategies using deterministic rules. The current build contains a playable local simulator, server-authoritative battle rules, streamer controls, a read-only OBS overlay, and Twitch OAuth and EventSub chat integration.
 
 ## Run locally
 
@@ -40,7 +40,7 @@ The production server serves the built client and API from port 3000. The match 
 
 ### Judge mode (no credentials required)
 
-The local simulator works without Twitch or OpenAI keys. From a clean checkout, run `npm install`, `npm test`, `npm run typecheck`, `npm run build`, then `npm start`. Open `http://localhost:3000` and use the simulator controls; the overlay is at `http://localhost:3000/overlay`. Judges can run and evaluate the game loop without authorizing an account.
+The local simulator works without Twitch credentials. From a clean checkout, run `npm install`, `npm test`, `npm run typecheck`, `npm run build`, then `npm start`. Open `http://localhost:3000` and use the simulator controls; the overlay is at `http://localhost:3000/overlay`. Judges can run and evaluate the game loop without authorizing an account.
 
 `npm start` sets `NODE_ENV=production` and serves both the studio and API from port 3000. The OAuth return URL defaults to that same port. If you change `PORT`, set `TWITCH_REDIRECT_URI` to `http://localhost:<port>/api/auth/twitch/callback`. For a deployed host, set `APP_BASE_URL` and `TWITCH_REDIRECT_URI` to the configured HTTPS domain and register the same callback in Twitch.
 
@@ -84,15 +84,9 @@ If the account authorizes successfully but chat does not connect, check the exac
 
 The production HTTP smoke check and local simulator do not replace a real-channel rehearsal. Before recording, authorize the intended Twitch channel and confirm that at least one real chat command increments the matching vote on the overlay.
 
-## Optional AI narration
-
-Copy `.env.example` to `.env` and set `OPENAI_API_KEY` to enable one short narrator line after a round. RIFT sends only the fixed boss/event context, winning action, and aggregate vote counts to the OpenAI Responses API. Chat messages and viewer identities are not sent. The model cannot select or change game effects; on timeout, invalid output, missing key, or API error, the fixed event explanation remains in place. `OPENAI_MODEL` defaults to `gpt-5-mini` and can be changed to another Responses API model available to your account.
-
 ## Current limitations
 
-- Live Twitch and optional AI narration still need to be exercised with your own credentials and channel before recording the final demo.
 - Match state is in memory; refreshing a browser is safe, restarting the server resets the match.
-- The controls and overlay are an initial visual pass and still need review at stream and mobile sizes.
 
 ## Hackathon delivery
 

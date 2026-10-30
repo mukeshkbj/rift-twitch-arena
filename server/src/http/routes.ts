@@ -2,7 +2,6 @@ import { Router } from "express";
 import type { GameEngine } from "../game/engine.js";
 import type { TwitchOAuth } from "../auth/twitch-oauth.js";
 import type { TwitchEventSub } from "../chat/twitch-eventsub.js";
-import type { EncounterNarrator } from "../ai/narrator.js";
 import { addSimulatedVotes } from "../demo/simulator.js";
 import { ACTIONS } from "../game/types.js";
 import type { Action } from "../game/types.js";
@@ -11,7 +10,6 @@ interface RouteDependencies {
   engine: GameEngine;
   oauth: TwitchOAuth;
   twitch: TwitchEventSub;
-  narrator: EncounterNarrator;
 }
 
 function appReturnUrl(oauth: TwitchOAuth, state: "connected" | "error", detail?: string): string {
@@ -31,7 +29,7 @@ function readCookie(cookieHeader: string | undefined, name: string): string | un
   }
 }
 
-export function createRoutes({ engine, oauth, twitch, narrator }: RouteDependencies): Router {
+export function createRoutes({ engine, oauth, twitch }: RouteDependencies): Router {
   const router = Router();
 
   const requireStudioOrigin = (request: import("express").Request, response: import("express").Response, next: import("express").NextFunction): void => {
@@ -59,7 +57,7 @@ export function createRoutes({ engine, oauth, twitch, narrator }: RouteDependenc
   router.use("/control", requireStudioOrigin);
   router.use("/auth/twitch", requireStudioOrigin);
 
-  router.get("/health", (_request, response) => response.json({ status: "ok", aiNarration: narrator.enabled }));
+  router.get("/health", (_request, response) => response.json({ status: "ok" }));
   router.get("/game", (_request, response) => response.json(engine.getSnapshot()));
   router.get("/auth/twitch/status", (_request, response) => response.json({
     ...oauth.status(),

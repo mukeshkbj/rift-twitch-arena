@@ -37,7 +37,7 @@ export interface GameSnapshot {
   totalVoters: number;
   winningAction: Action | null;
   roundResult: BattleRoundSummary | null;
-  adaptation: { eventId: string; title: string; explanation: string; narration?: string } | null;
+  adaptation: { eventId: string; title: string; explanation: string } | null;
   summary: BattleSummary | null;
   recentLog: Array<{ id: string; text: string; kind: "system" | "crowd" | "boss" }>;
   input: { mode: "simulator" | "twitch"; twitchStatus: "disconnected" | "connecting" | "connected" | "error" };

@@ -75,7 +75,7 @@ test("clamps health to valid bounds", () => {
   assert.equal(clampHealth(12, 20), 12);
 });
 
-test("scales Warden health from a solo viewer to the twelve-viewer baseline", () => {
+test("scales Warden health from distinct viewers who join across the match", () => {
   assert.equal(bossHealthForAudience(1), RULES.minimumBossHealth);
   assert.ok(bossHealthForAudience(3) < bossHealthForAudience(5));
   assert.equal(bossHealthForAudience(12), RULES.bossHealth);
@@ -86,8 +86,18 @@ test("scales Warden health from a solo viewer to the twelve-viewer baseline", ()
   assert.equal(initial.boss.maxHealth, RULES.minimumBossHealth);
   engine.submitVote(vote("viewer-1", "attack", 1));
   assert.equal(engine.getSnapshot().boss.maxHealth, RULES.minimumBossHealth);
-  engine.submitVote(vote("viewer-2", "attack", 1));
+  engine.resolveRound(2);
+  engine.beginNextRound(3);
+  engine.submitVote(vote("viewer-1", "attack", 4));
+  assert.equal(engine.getSnapshot().boss.maxHealth, RULES.minimumBossHealth);
+  engine.submitVote(vote("viewer-2", "attack", 4));
   assert.equal(engine.getSnapshot().boss.maxHealth, bossHealthForAudience(2));
+
+  const reset = engine.resetMatch(5);
+  assert.equal(reset.boss.maxHealth, RULES.minimumBossHealth);
+  engine.startMatch(6);
+  engine.submitVote(vote("viewer-2", "attack", 7));
+  assert.equal(engine.getSnapshot().boss.maxHealth, RULES.minimumBossHealth);
 });
 
 test("adapts to repeated choices and rotates a fallback without a repeated pattern", () => {

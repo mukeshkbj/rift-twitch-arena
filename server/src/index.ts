@@ -10,7 +10,6 @@ import { GameScheduler } from "./game/scheduler.js";
 import { createRoutes } from "./http/routes.js";
 import { TwitchOAuth } from "./auth/twitch-oauth.js";
 import { TwitchEventSub } from "./chat/twitch-eventsub.js";
-import { EncounterNarrator } from "./ai/narrator.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -19,27 +18,12 @@ const engine = new GameEngine();
 const scheduler = new GameScheduler(engine);
 const oauth = new TwitchOAuth();
 const twitch = new TwitchEventSub(engine, oauth);
-const narrator = new EncounterNarrator();
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "16kb" }));
-app.use("/api", createRoutes({ engine, oauth, twitch, narrator }));
+app.use("/api", createRoutes({ engine, oauth, twitch }));
 
-const narratedRounds = new Set<string>();
-engine.subscribe((snapshot) => {
-  io.emit("game:snapshot", snapshot);
-  if (snapshot.phase !== "intermission" || !snapshot.adaptation || !narrator.enabled) return;
-  const key = `${snapshot.matchId}:${snapshot.round}`;
-  if (narratedRounds.has(key)) return;
-  narratedRounds.add(key);
-  if (narratedRounds.size > 256) {
-    const oldest = narratedRounds.values().next().value as string | undefined;
-    if (oldest) narratedRounds.delete(oldest);
-  }
-  void narrator.narrate(snapshot).then((text) => {
-    if (text) engine.setNarration(snapshot.matchId, snapshot.round, snapshot.adaptation!.eventId, text);
-  });
-});
+engine.subscribe((snapshot) => io.emit("game:snapshot", snapshot));
 io.on("connection", (socket) => {
   socket.emit("game:snapshot", engine.getSnapshot());
 });

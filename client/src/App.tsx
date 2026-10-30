@@ -207,7 +207,6 @@ export function App() {
             {game.adaptation && !game.summary && <section className="overlay-adaptation">
               <span>WARDEN RESPONSE · {game.adaptation.title}</span>
               <p>{game.adaptation.explanation}</p>
-              {game.adaptation.narration && <strong className="overlay-narration">{game.adaptation.narration}</strong>}
             </section>}
             {game.summary && <section className="overlay-summary">
               <span>RAID RECAP · {game.summary.outcome === "victory" ? "VICTORY" : "DEFEAT"}</span>
@@ -229,7 +228,6 @@ export function App() {
             <div className="encounter-details"><span>ADAPTATION</span><strong>{game.boss.stance}</strong></div>
             {game.adaptation && <>
               <p className="adaptation-copy">{game.adaptation.explanation}</p>
-              {game.adaptation.narration && <p className="ai-narration"><span>AI GAME MASTER</span>{game.adaptation.narration}</p>}
             </>}
           </div>
 

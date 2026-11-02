@@ -130,3 +130,47 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--acid); outline-
 @media (max-width: 1020px) { .studio-layout { width: min(850px,92%); grid-template-columns: minmax(0,1fr) 285px; gap: 18px; }.arena-stage { min-height: 380px; }.vote-options { grid-template-columns: 1fr; gap: 6px; }.vote-option { padding: 7px 9px; }.vote-name-line { margin-bottom: 5px; } }
 @media (max-width: 760px) { .topbar { height: 58px; padding: 0 4%; }.topbar-right { gap: 12px; }.overlay-link { display: none; }.mode-label { font-size: 8px; }.socket-status { font-size: 8px; }.studio-layout { width: 92%; display: flex; flex-direction: column; gap: 16px; padding-top: 22px; }.arena-column,.control-column { width: 100%; }.arena-headline { align-items: center; }.arena-headline h1 { font-size: 29px; }.phase-chip { font-size: 8px; }.arena-stage { min-height: 390px; }.control-column { display: grid; grid-template-columns: 1fr; }.vote-options { grid-template-columns: repeat(3,minmax(0,1fr)); }.vote-option { gap: 6px; padding: 8px 7px; }.vote-name-line { align-items: start; flex-direction: column; gap: 2px; }.vote-icon { width: 15px; }.vote-numbers { width: 25px; }.arena-foot { font-size: 7px; padding: 0 9px; }.overlay-shell { padding: 3vw; }.overlay-shell .arena-stage { min-height: min(43vh,500px); }.overlay-story { grid-template-columns: 1fr 1fr; gap: 5px; }.overlay-result,.overlay-adaptation,.overlay-summary,.overlay-battle-feed { padding: 7px 8px; } }
 @media (max-width: 440px) { .socket-status { display: none; }.arena-headline h1 { font-size: 25px; }.phase-chip { padding: 7px; }.arena-stage { min-height: 355px; }.boss-health-block,.crowd-health-block { width: 34%; top: 14px; }.boss-health-block { left: 10px; }.crowd-health-block { right: 10px; }.health-heading { font-size: 7px; flex-direction: column; gap: 2px; }.health-heading strong { font-size: 11px; }.timer-ring { width: 58px; height: 58px; }.warden-art { transform: translate(-50%,-50%) scale(.83); }.stage-caption { top: calc(43% + 99px); font-size: 8px; }.orbit-one { width: 240px; }.orbit-two { width: 195px; }.vote-console { padding: 13px 9px 10px; }.section-heading h2 { font-size: 10px; }.vote-options { gap: 4px; }.vote-option { gap: 4px; padding: 7px 5px; }.vote-name-line strong { font-size: 9px; }.vote-name-line code { font-size: 7px; }.vote-icon { font-size: 13px; }.charge-copy strong { font-size: 8px; }.charge-pips { gap: 3px; }.charge-pips span { width: 13px; }.arena-meta { font-size: 7px; padding: 0 9px; } }
+
+/* The breach: clearer combat information with a warmer, more theatrical arena. */
+.app-shell:not(.overlay-shell) { background: #181a16; }
+.topbar { background: rgba(18,19,16,.86); }
+.arena-frame { border-color: rgba(232,199,139,.3); box-shadow: none; }
+.arena-stage { background: linear-gradient(180deg,#292a23,#171a16); }
+.arena-stage::before { opacity: .06; }
+.arena-stage::after { height: 1px; box-shadow: none; }
+.warden-art { filter: drop-shadow(0 12px 12px rgba(0,0,0,.35)); }
+.warden-core { background: linear-gradient(145deg,#b49368,#4b4034 35%,#211f1b 66%,#b6553c); }
+.warden-eye { filter: none; }
+.health-heading { font-size: 10px; color: #e5dfd0; }
+.health-heading strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+.health-track { height: 7px; }
+.timer-ring { width: 76px; height: 76px; box-shadow: none; }
+.timer-ring strong { font-size: 26px; font-variant-numeric: tabular-nums; }
+.timer-kicker,.timer-unit { color: #c7c5b8; font-size: 8px; }
+.stage-caption { color: #f1d8b0; font-size: 10px; }
+.arena-status { bottom: 45px; padding: 7px 12px; border: 1px solid #ffffff20; background: #141510d9; color: #f3e8d2; font-size: 10px; }
+.vote-console { padding: 20px; border-color: #ffffff24; background: #20221c; }
+.section-heading h2 { font-size: 14px; }.vote-count { font-size: 18px; }.vote-count small { font-size: 10px; }
+.vote-option { min-height: 68px; padding: 12px; background: #ffffff08; }
+.vote-winner { box-shadow: inset 0 -2px var(--acid); }
+.vote-icon { font-size: 22px; }.vote-name-line strong { font-size: 14px; }.vote-name-line code { color: #c7c9b9; font-size: 11px; }
+.vote-track { height: 6px; }.vote-numbers { width: 36px; }.vote-numbers strong { font-size: 19px; font-variant-numeric: tabular-nums; }.vote-numbers span { font-size: 10px; }
+.charge-copy strong { font-size: 11px; }.charge-copy small { color: #c0c0b1; font-size: 10px; }.charge-pips span { width: 24px; height: 7px; }
+.control-card { border-color: #ffffff20; background-color: #22241e; }.encounter-card { border-top: 1px solid #ffffff20; }
+.card-label { color: #b9b9a9; font-size: 10px; }.encounter-card > p,.encounter-card .adaptation-copy { font-size: 12px; }.encounter-details { font-size: 10px; }
+.button-primary,.button-secondary { min-height: 46px; font-size: 13px; }.twitch-account-copy strong,.sim-button strong { font-size: 12px; }.twitch-account-copy small,.sim-button small,.sim-note,.battle-log li { font-size: 11px; }
+.overlay-result > span,.overlay-adaptation > span,.overlay-summary > span,.overlay-battle-feed > span { font-size: 10px; }.overlay-result > strong { font-size: 19px; }.overlay-result p,.overlay-adaptation p,.overlay-summary p,.overlay-summary li,.overlay-battle-feed li { font-size: 11px; line-height: 1.4; }.overlay-chat-prompt { font-size: 12px; }
+@media (max-width: 760px) { .vote-console { padding: 14px; }.vote-option { padding: 9px 6px; }.vote-name-line strong { font-size: 12px; }.vote-name-line code { font-size: 10px; }.vote-numbers strong { font-size: 15px; }.charge-pips span { width: 16px; }.timer-ring { width: 64px; height: 64px; } }
+@media (max-width: 440px) { .health-heading { font-size: 8px; }.health-heading strong { font-size: 12px; }.vote-icon { display: none; }.vote-name-line code { font-size: 9px; }.vote-option { gap: 3px; }.vote-numbers { width: 24px; }.charge-copy small { font-size: 9px; } }
+@media (max-width: 440px) {
+  .vote-options { grid-template-columns: 1fr; gap: 6px; }
+  .vote-option { min-height: 52px; padding: 8px 10px; }
+  .vote-name-line { flex-direction: row; align-items: baseline; }
+  .vote-name-line strong { font-size: 13px; }
+  .vote-name-line code { font-size: 11px; }
+  .vote-numbers { width: 38px; }
+  .charge-row { gap: 8px; flex-wrap: wrap; }
+}
+@media (pointer: coarse) {
+  .button-primary, .button-secondary, .sim-button, .reset-button, .connect-twitch, .disconnect-twitch { min-height: 44px; }
+}

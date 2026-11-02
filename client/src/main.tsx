@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { App } from "./App.js";
 import "./styles/tokens.css";
 import "./styles/arena.css";
+import "./styles/showcase.css";
 
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

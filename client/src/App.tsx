@@ -10,11 +10,20 @@ interface TwitchAuthStatus {
   chatStatus: "disconnected" | "connecting" | "connected" | "error";
 }
 
-const actionMeta: Record<Action, { label: string; command: string; icon: string }> = {
-  attack: { label: "Attack", command: "!attack", icon: "↗" },
-  defend: { label: "Defend", command: "!defend", icon: "⬡" },
-  special: { label: "Riftburst", command: "!special", icon: "✳" },
+const actionMeta: Record<Action, { label: string; command: string; icon: string; description: string }> = {
+  attack: { label: "Attack", command: "!attack", icon: "↗", description: "Strike hard. Take a full hit back." },
+  defend: { label: "Defend", command: "!defend", icon: "⬡", description: "Deal light damage. Reduce the hit back." },
+  special: { label: "Riftburst", command: "!special", icon: "✳", description: "Charge together. Unleash a stronger strike." },
 };
+
+function tacticalAdvice(game: GameSnapshot): string {
+  switch (game.adaptation?.eventId) {
+    case "iron-bloom": return "Attack deals 6 less damage this round. Switch tactics to work around the armor.";
+    case "sunder-pulse": return "The next hit is heavier. Defend still reduces the damage your raid takes.";
+    case "rift-static": return "Riftburst deals 7 less damage this round. Consider a different tactic.";
+    default: return "Repeat a winning tactic twice in three rounds and the Warden builds a counter.";
+  }
+}
 
 function percent(value: number, max: number): number {
   return max === 0 ? 0 : Math.round((value / max) * 100);
@@ -60,6 +69,7 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [summaryCopyStatus, setSummaryCopyStatus] = useState("");
+  const [resetArmed, setResetArmed] = useState(false);
   const isOverlay = window.location.pathname === "/overlay";
 
   useEffect(() => {
@@ -87,6 +97,7 @@ export function App() {
     setBusy(true);
     setError("");
     setSummaryCopyStatus("");
+    setResetArmed(false);
     try {
       const result = await control<GameSnapshot | { snapshot: GameSnapshot }>(path, body, "POST");
       setGame("snapshot" in result ? result.snapshot : result);
@@ -121,15 +132,16 @@ export function App() {
   }
 
   if (!game) {
-    return <main className="loading-screen"><span className="rift-mark">R</span><p>Opening the breach…</p>{error && <p className="error-note">{error}</p>}</main>;
+    return <main className="loading-screen"><span className="rift-mark">R</span><p>{error ? "The raid could not load." : "Opening the breach…"}</p>{error && <><p className="error-note">{error}</p><button className="button-secondary" onClick={() => window.location.reload()}>Retry connection</button></>}</main>;
   }
 
   const timeSeconds = Math.ceil(remainingMs / 1000);
   const timePct = Math.max(0, Math.min(100, (remainingMs / game.voteDurationMs) * 100));
   const isVoting = game.phase === "voting" && !game.paused;
+  const nextStep = game.paused ? "Voting is paused. Resume when your chat is ready." : game.phase === "lobby" ? "Begin the encounter to open the first voting round." : game.phase === "resolving" ? "Votes are locked. The raid’s move is resolving." : game.phase === "intermission" ? "Read the Warden’s response. The next round starts automatically." : game.summary ? "Review the raid below, copy the recap, or start another encounter." : game.totalVoters === 0 ? (game.input.mode === "twitch" ? "Waiting for viewer commands in Twitch chat. Each viewer gets one vote per round." : "Try the fight: add a simulated vote wave from the raid controls.") : `${game.totalVoters} ${game.totalVoters === 1 ? "viewer has" : "viewers have"} voted. The leading tactic resolves when the timer ends.`;
 
   return (
-    <main className={`app-shell ${isOverlay ? "overlay-shell" : ""}`}>
+    <main className={`app-shell phase-${game.phase} ${isOverlay ? "overlay-shell" : ""}`}>
       {!isOverlay && <header className="topbar">
         <a className="wordmark" href="/" aria-label="RIFT studio home"><span className="wordmark-icon">R</span><span>RIFT<span className="wordmark-separator">/</span>RAID CONTROL</span></a>
         <div className="topbar-right">
@@ -144,22 +156,25 @@ export function App() {
           <div className="arena-headline">
             <div>
               <p className="eyebrow"><span className="eyebrow-line" /> CO-OP RAID <span className="eyebrow-index">{String(game.round).padStart(2, "0")} / {String(game.roundLimit).padStart(2, "0")}</span></p>
-              <h1>The breach is <em>open.</em></h1>
+              <h1>One chat. One <em>raid.</em></h1>
+              <p className="arena-intro">Your tactics shape the fight. The Warden learns them.</p>
             </div>
             <div className={`phase-chip phase-${game.phase}`}><span className="phase-pip" />{phaseLabel(game)}</div>
           </div>
 
+
           <section className="arena-frame" aria-label="The Hollow Warden encounter">
             <div className="arena-meta"><span>SECTOR 07 <b>·</b> THE ASHEN RIFT</span><span>ENCOUNTER {String(Math.max(1, game.round)).padStart(2, "0")}</span></div>
-            <div className="arena-stage">
+            <div className={`arena-stage ${game.roundResult?.specialBurst ? "stage-burst" : ""}`}>
               <div className="stage-grid" aria-hidden="true" />
               <div className="rift-orbit orbit-one" aria-hidden="true" /><div className="rift-orbit orbit-two" aria-hidden="true" />
               <div className={`warden-art ${game.phase === "resolving" ? "warden-strike" : ""}`} aria-label="Stylized illustration of the Hollow Warden" role="img">
+                <img className="warden-portrait" src="/art/hollow-warden.png" alt="" width="1024" height="1024" onLoad={(event) => event.currentTarget.parentElement?.classList.add("portrait-loaded")} onError={(event) => { event.currentTarget.style.display = "none"; }} />
                 <div className="warden-halo" /><div className="warden-core"><span className="warden-eye" /><span className="warden-slit" /></div>
                 <span className="warden-shard shard-left" /><span className="warden-shard shard-right" />
               </div>
               <div className="stage-caption"><span className="caption-rule" /><span>THE HOLLOW WARDEN</span><span className="caption-rule" /></div>
-              <div className="arena-stamp">R<br />I<br />F<br />T</div>
+              <div className="arena-stamp">HOLLOW<br />WARDEN</div>
               <div className="boss-health-block">
                 <div className="health-heading"><span>WARDEN INTEGRITY</span><strong>{game.boss.health}<small> / {game.boss.maxHealth}</small></strong></div>
                 <div className="health-track boss-track"><span style={{ width: `${percent(game.boss.health, game.boss.maxHealth)}%` }} /></div>
@@ -172,12 +187,22 @@ export function App() {
                 <span className="timer-kicker">VOTE IN</span><strong>{String(timeSeconds).padStart(2, "0")}</strong><span className="timer-unit">SEC</span>
               </div>
               <div className="arena-status"><span className="status-wave">〰</span><span>{isVoting ? "YOUR CHAT HAS THE FLOOR" : phaseLabel(game).toUpperCase()}</span></div>
+              {(game.phase === "intermission" || game.summary) && game.roundResult && <div className="combat-result" key={`${game.matchId}-${game.roundResult.round}`} aria-live="polite">
+                <span>{game.summary ? (game.summary.outcome === "victory" ? "BREACH SEALED" : "RAID ENDED") : `ROUND ${game.roundResult.round} RESOLVED`}</span>
+                <strong>{game.roundResult.specialBurst ? "Riftburst unleashed" : game.roundResult.action ? `${actionMeta[game.roundResult.action].label} lands` : "No votes cast"}</strong>
+                <p>Warden −{game.roundResult.bossDamage} <span> / </span> Raid −{game.roundResult.raidDamage}</p>
+              </div>}
             </div>
-            <div className="arena-foot"><span>CHAT COMMANDS</span><span>ONE VOTE PER VIEWER</span><span>STREAM OVERLAY <b>16:9</b></span></div>
+            <div className="arena-foot"><span>{game.input.mode === "twitch" ? "TWITCH CHAT" : "SIMULATOR"}</span><span>ONE VOTE PER VIEWER</span><span>ROUND <b>{game.round} / {game.roundLimit}</b></span></div>
+          </section>
+
+          <section className="warden-response" aria-label="Current Warden adaptation" aria-live="polite">
+            <div><span>THE WARDEN IS LEARNING</span><strong>{game.adaptation?.title ?? "Watching your next move"}</strong></div>
+            <div className="response-explanation"><p className="tactical-advice">{tacticalAdvice(game)}</p></div>
           </section>
 
           <section className="vote-console" aria-label="Live audience votes">
-            <div className="section-heading"><div><span className="section-number">01</span><h2>THE CROWD DECIDES</h2></div><span className="vote-count">{game.totalVoters} <small>VOTERS</small></span></div>
+            <div className="section-heading"><div><h2>Choose your move</h2></div><span className="vote-count">{game.totalVoters} <small>VOTERS</small></span></div>
             <div className="vote-options">
               {(Object.keys(actionMeta) as Action[]).map((action) => {
                 const meta = actionMeta[action];
@@ -185,15 +210,24 @@ export function App() {
                 const share = game.totalVoters ? Math.round((votes / game.totalVoters) * 100) : 0;
                 return <div className={`vote-option vote-${action} ${game.winningAction === action ? "vote-winner" : ""}`} key={action}>
                   <span className="vote-icon" aria-hidden="true">{meta.icon}</span>
-                  <div className="vote-info"><div className="vote-name-line"><strong>{meta.label}</strong><code>{meta.command}</code></div><div className="vote-track"><span style={{ width: `${share}%` }} /></div></div>
+                  <div className="vote-info"><div className="vote-name-line"><strong>{meta.label}</strong><code>{meta.command}</code></div><div className="vote-track" role="meter" aria-label={`${meta.label} vote share`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={share}><span style={{ width: `${share}%` }} /></div><p className="tactic-description">{meta.description}</p></div>
                   <div className="vote-numbers"><strong>{votes}</strong><span>{share}%</span></div>
                 </div>;
               })}
             </div>
-            <div className="charge-row"><div className="charge-copy"><span className="charge-symbol">✳</span><span><strong>RIFTBURST CHARGE</strong><small>{game.crowd.specialCharge} OF {game.crowd.specialThreshold} SPECIAL VOTES</small></span></div><div className="charge-pips" aria-label={`${game.crowd.specialCharge} of ${game.crowd.specialThreshold} charge`}>
+            <div className="charge-row"><div className="charge-copy"><span className="charge-symbol">✳</span><span><strong>{game.crowd.specialCharge >= game.crowd.specialThreshold ? "RIFTBURST READY" : "RIFTBURST CHARGE"}</strong><small>{game.crowd.specialCharge >= game.crowd.specialThreshold ? "Win with !special to unleash it" : `${game.crowd.specialCharge} of ${game.crowd.specialThreshold} special votes to charge`}</small></span></div><div className="charge-pips" aria-label={`${game.crowd.specialCharge} of ${game.crowd.specialThreshold} charge`}>
               {Array.from({ length: game.crowd.specialThreshold }, (_, index) => <span className={index < game.crowd.specialCharge ? "charged" : ""} key={index} />)}
             </div></div>
           </section>
+          {!isOverlay && <p className="vote-guidance">{game.input.mode === "twitch" ? <>Type a command in {twitch?.login ? <a href={`https://www.twitch.tv/${encodeURIComponent(twitch.login)}/chat`} target="_blank" rel="noreferrer">@{twitch.login}’s Twitch chat ↗</a> : "Twitch chat"}. Broadcaster commands are ignored.</> : "Simulator mode: use the vote wave buttons to try each tactic. Connect Twitch for real viewer votes."} First vote counts; extra commands in the same round are ignored.</p>}
+          <div className="raid-progress" aria-label="Raid round progress">{Array.from({ length: game.roundLimit }, (_, index) => <span key={index} className={index + 1 === game.round ? "round-current" : index + 1 < game.round ? "round-complete" : ""}><b>{String(index + 1).padStart(2, "0")}</b>{index + 1 === game.round ? "Current round" : index + 1 < game.round ? "Resolved" : "Upcoming"}</span>)}</div>
+          {!isOverlay && game.summary && <section className={`match-recap recap-${game.summary.outcome}`} aria-labelledby="match-recap-title">
+            <div className="recap-heading"><div><span>RAID COMPLETE</span><h2 id="match-recap-title">{game.summary.outcome === "victory" ? "The breach is sealed." : "The Warden held the breach."}</h2></div><button className="summary-copy-button" onClick={() => void copyBattleSummary(game.boss.name, game.summary!)}>Copy battle summary</button></div>
+            <dl className="recap-stats"><div><dt>Votes cast</dt><dd>{game.summary.totalVotes}</dd></div><div><dt>Warden damage</dt><dd>{game.summary.bossDamage}</dd></div><div><dt>Raid damage</dt><dd>{game.summary.raidDamage}</dd></div><div><dt>Charged bursts</dt><dd>{game.summary.specialBursts}</dd></div></dl>
+            <ol className="recap-rounds">{game.summary.roundLog.map(round => <li key={round.round}><span>R{round.round}</span><strong>{round.action ? actionMeta[round.action].label : "No votes"}{round.specialBurst ? " / charged" : ""}</strong><span>Warden −{round.bossDamage} / Raid −{round.raidDamage}</span><small>{round.nextAdaptation ? `Learned ${round.nextAdaptation}` : round.bossCounter ? `Counter: ${round.bossCounter}` : round.round === game.summary!.rounds ? "Encounter ended" : "No counter active"}</small></li>)}</ol>
+            <details className="recap-text"><summary>Full text recap</summary><h3 id="battle-summary-title">Battle summary</h3><p className="battle-summary-text">{formatBattleSummary(game.boss.name, game.summary)}</p></details>
+            <p className="summary-copy-status" role="status">{summaryCopyStatus}</p>
+          </section>}
           {isOverlay && <div className="overlay-story" aria-live="polite">
             {game.phase === "resolving" && <section className="overlay-result overlay-resolving">
               <span>ROUND {String(game.round).padStart(2, "0")} · VOTE LOCKED</span>
@@ -222,7 +256,7 @@ export function App() {
 
         {!isOverlay && <aside className="control-column" aria-label="Streamer controls">
           <div className="control-card encounter-card">
-            <div className="card-label"><span>ENCOUNTER FILE</span><span className="file-stamp">R–07</span></div>
+            <div className="card-label"><span>ENCOUNTER FILE</span><span className="file-stamp">R-07</span></div>
             <h2>THE HOLLOW<br /><em>WARDEN</em></h2>
             <p>A breach-born sentinel. It studies the crowd, then answers with force.</p>
             <div className="encounter-details"><span>ADAPTATION</span><strong>{game.boss.stance}</strong></div>
@@ -231,16 +265,17 @@ export function App() {
             </>}
           </div>
 
-          <div className="control-card live-controls">
-            <div className="card-label"><span>RAID CONTROL</span><span className={`control-phase ${game.phase === "voting" ? "active" : ""}`}><i />{game.phase.toUpperCase()}</span></div>
+          <div className="control-card live-controls" id="raid-controls" tabIndex={-1}>
+            <div className="card-label"><span>RAID CONTROL</span><span className={`control-phase ${game.phase === "voting" ? "active" : ""}`}><i />{game.paused ? "PAUSED" : game.phase.toUpperCase()}</span></div>
             <div className="primary-actions">
               {game.phase === "lobby" || game.phase === "victory" || game.phase === "defeat" ?
                 <button className="button-primary" disabled={busy} onClick={() => void run("control/start")}><span>▶</span> {game.phase === "lobby" ? "Begin encounter" : "Run it back"}</button> :
-                <button className="button-primary" disabled={busy || game.phase !== "voting"} onClick={() => void run("control/resolve")}><span>↯</span> {game.phase === "resolving" ? "Resolving…" : "Resolve the vote"}</button>}
-              {game.phase === "voting" && <button className="button-secondary" disabled={busy} onClick={() => void run(game.paused ? "control/resume" : "control/pause")}>
-                <span>{game.paused ? "▶" : "Ⅱ"}</span>{game.paused ? "Resume voting" : "Pause voting"}
+                <button className="button-primary" disabled={busy || game.phase !== "voting"} onClick={() => void run(game.paused ? "control/resume" : "control/resolve")}><span>{game.paused ? "▶" : "↯"}</span> {busy ? "Updating…" : game.phase === "resolving" ? "Resolving…" : game.phase === "intermission" ? "Next round soon" : game.paused ? "Resume voting" : "Resolve the vote"}</button>}
+              {game.phase === "voting" && !game.paused && <button className="button-secondary" disabled={busy} onClick={() => void run("control/pause")}>
+                <span>Ⅱ</span>Pause voting
               </button>}
             </div>
+            <p className="control-guidance">{nextStep}</p>
             <div className="control-divider" />
             <div className="card-label simulator-label"><span>TWITCH CHAT</span><span className={`twitch-state state-${twitch?.chatStatus ?? "disconnected"}`}><i />{(twitch?.chatStatus ?? "disconnected").toUpperCase()}</span></div>
             <div className="twitch-connect-row">
@@ -264,7 +299,7 @@ export function App() {
               </button>)}
             </div>
             <p className="sim-note">Simulator votes are labelled and isolated from real Twitch chat.</p>
-            <button className="reset-button" disabled={busy || game.phase === "lobby"} onClick={() => void run("control/reset")}>↺ <span>Reset encounter</span></button>
+            {resetArmed ? <div className="reset-confirm"><p>Discard this raid and return to the lobby?</p><button className="button-secondary" disabled={busy} onClick={() => void run("control/reset")}>Reset raid</button><button className="reset-button" onClick={() => setResetArmed(false)}>Keep playing</button></div> : <button className="reset-button" disabled={busy || game.phase === "lobby"} onClick={() => setResetArmed(true)}>↺ <span>Reset encounter</span></button>}
             {error && <p className="error-note" role="alert">{error}</p>}
           </div>
 
@@ -272,13 +307,6 @@ export function App() {
             <div className="card-label"><span>BATTLE FEED</span><span className="feed-count">{String(game.recentLog.length).padStart(2, "0")}</span></div>
             <ol className="battle-log">{[...game.recentLog].reverse().map((entry) => <li className={`log-${entry.kind}`} key={entry.id}><span className="log-mark" />{entry.text}</li>)}</ol>
           </div>
-          {game.summary && <section className="control-card battle-summary-card" aria-labelledby="battle-summary-title">
-            <div className="card-label"><span>SHAREABLE RECAP</span><span className={`summary-result summary-${game.summary.outcome}`}>{game.summary.outcome === "victory" ? "VICTORY" : "DEFEAT"}</span></div>
-            <h3 id="battle-summary-title">{game.summary.outcome === "victory" ? "The Warden fell." : "The Warden held."}</h3>
-            <p className="battle-summary-text">{formatBattleSummary(game.boss.name, game.summary)}</p>
-            <button className="summary-copy-button" type="button" onClick={() => void copyBattleSummary(game.boss.name, game.summary!)}>Copy battle summary</button>
-            <p className="summary-copy-status" role="status" aria-live="polite">{summaryCopyStatus}</p>
-          </section>}
           <footer className="control-footer"><span>RIFT SYSTEMS</span><span>BUILD 0.1 · LOCAL DEMO</span></footer>
         </aside>}
       </div>
